@@ -59,7 +59,7 @@ const SubmissionHistory = ({ problemId }) => {
 
   return (
     <div className="overflow-hidden rounded-xl border border-rule">
-      <div className={cn('hidden border-b border-rule bg-sheet-sunk px-4 py-2.5', GRID)}>
+      <div className={cn('hidden border-b border-rule bg-sheet-sunk py-2.5 pl-[19px] pr-4', GRID)}>
         <span className="t-micro text-ink-3">Status</span>
         <span className="t-micro text-ink-3">Language</span>
         <span className="t-micro text-right text-ink-3">Runtime</span>
@@ -77,18 +77,25 @@ const SubmissionHistory = ({ problemId }) => {
               <button
                 type="button"
                 onClick={() => setSelected(sub)}
+                style={{ borderLeft: `3px solid ${meta.color}` }}
                 className={cn(
-                  'w-full px-4 py-3 text-left transition-colors hover:bg-sheet-hover',
+                  'w-full py-3 pl-3.5 pr-4 text-left transition-colors hover:bg-sheet-hover',
                   index > 0 && 'border-t border-rule-faint',
                   GRID
                 )}
               >
                 <span className="min-w-0">
-                  <span className="flex items-center gap-1.5" style={{ color: meta.color }}>
-                    <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-                    <span className="t-body truncate font-semibold">{meta.label}</span>
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[12.5px] font-semibold"
+                    style={{
+                      color: meta.color,
+                      background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
+                    }}
+                  >
+                    <Icon className="h-3 w-3 shrink-0" strokeWidth={2.75} aria-hidden />
+                    {meta.label}
                   </span>
-                  <span className="t-body-sm mt-0.5 block text-ink-3">
+                  <span className="t-body-sm mt-1 block text-ink-3">
                     {formatDate(sub.createdAt)}
                     {failed && ` · ${sub.testCasesPassed}/${sub.testCasesTotal} cases`}
                   </span>
