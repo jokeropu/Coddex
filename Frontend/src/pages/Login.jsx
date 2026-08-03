@@ -121,7 +121,6 @@ function Login() {
                     theme={ground === 'night' ? 'filled_black' : 'outline'}
                     shape="square"
                     text="signin_with"
-                    width="384"
                     onSuccess={(res) => dispatch(googleAuth(res.credential))}
                     onError={() => {}}
                 />
