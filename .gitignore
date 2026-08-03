@@ -1,0 +1,6 @@
+node_modules
+
+# Machine-local agent tooling — hardcodes this machine's paths and holds
+# per-user design-review state, not meant to travel with the repo.
+.claude/
+.impeccable/

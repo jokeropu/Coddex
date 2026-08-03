@@ -1,0 +1,4 @@
+module.exports={
+    VIDEO_UNLOCK_COST:100,
+    EDITORIAL_UNLOCK_COST:200
+};

@@ -1,0 +1,244 @@
+const {getLanguageById,submitBatch,submitToken}=require('../utils/problemUtility');
+const Problem=require('../models/problem');
+const Contest=require('../models/contest');
+const User=require('../models/user');
+const getContestStatus=require('../utils/contestStatus');
+const notify=require('../utils/notify');
+
+const CONTEST_CREATION_CREDITS=500;
+
+const verifyReferenceSolutions=async(visibleTestCases,referenceSolution)=>{
+    for(const {language,completeCode} of referenceSolution){
+        const languageId=getLanguageById(language);
+
+        const submissions=visibleTestCases.map((testcase)=>({
+            source_code:completeCode,
+            language_id:languageId,
+            stdin:testcase.input,
+            expected_output:testcase.output
+        }));
+
+        const submitResult=await submitBatch(submissions);
+        const resultToken=submitResult.map((value)=>value.token);
+        const testResult=await submitToken(resultToken);
+
+        for(const test of testResult){
+            if(test.status.id!=3){
+                throw new Error(`Reference solution (${language}) failed on a test case: ${test.status.description}`);
+            }
+        }
+    }
+};
+
+const publishContestProblemsIfEnded=async(contest)=>{
+    const status=getContestStatus(contest);
+    if(status==='ended' && !contest.problemsPublished){
+        const claimed=await Contest.findOneAndUpdate(
+            {_id:contest._id,problemsPublished:false},
+            {$set:{problemsPublished:true}}
+        );
+        if(claimed){
+            await Problem.updateMany({contestId:contest._id},{$set:{visibleInProblemList:true}});
+        }
+        contest.problemsPublished=true;
+    }
+    return status;
+};
+
+const createContest=async(req,res)=>{
+    const {title,description,startTime,endTime,problems}=req.body;
+
+    try{
+        if(!title || !description || !startTime || !endTime){
+            return res.status(400).json({error:"Missing required contest fields"});
+        }
+        if(new Date(endTime)<=new Date(startTime)){
+            return res.status(400).json({error:"endTime must be after startTime"});
+        }
+        if(!Array.isArray(problems) || problems.length!==3){
+            return res.status(400).json({error:"Exactly 3 problems (easy, medium, hard) are required"});
+        }
+
+        const difficulties=problems.map((p)=>p.difficulty).sort();
+        if(JSON.stringify(difficulties)!==JSON.stringify(['easy','hard','medium'])){
+            return res.status(400).json({error:"Problems must be exactly one easy, one medium, and one hard"});
+        }
+
+        for(const problem of problems){
+            await verifyReferenceSolutions(problem.visibleTestCases,problem.referenceSolution);
+        }
+
+        const contest=await Contest.create({
+            title,
+            description,
+            startTime,
+            endTime,
+            createdBy:req.result._id,
+            problems:[]
+        });
+
+        const createdProblems=[];
+        for(const problem of problems){
+            const lastProblem=await Problem.findOne().sort({problemNumber:-1}).select('problemNumber');
+            const problemNumber=lastProblem?.problemNumber ? lastProblem.problemNumber+1 : 1;
+
+            const createdProblem=await Problem.create({
+                ...problem,
+                problemNumber,
+                problemCreator:req.result._id,
+                contestId:contest._id,
+                visibleInProblemList:false
+            });
+
+            createdProblems.push({problemId:createdProblem._id,difficulty:createdProblem.difficulty});
+        }
+
+        contest.problems=createdProblems;
+        await contest.save();
+
+        await User.updateOne({_id:req.result._id},{$inc:{credits:CONTEST_CREATION_CREDITS}});
+
+        await notify(
+            req.result._id,
+            'contest_created',
+            'Contest created successfully',
+            `You created "${contest.title}" and earned +${CONTEST_CREATION_CREDITS} credits.`,
+            `/contest/${contest._id}`
+        );
+
+        res.status(201).json({message:"Contest created successfully",contestId:contest._id});
+    }
+    catch(err){
+        res.status(400).json({error:err.message});
+    }
+};
+
+const getAllContests=async(req,res)=>{
+    try{
+        const contests=await Contest.find({}).select('title description startTime endTime createdBy problemsPublished').sort({startTime:-1});
+
+        for(const contest of contests){
+            await publishContestProblemsIfEnded(contest);
+        }
+
+        const result=contests.map((contest)=>({
+            _id:contest._id,
+            title:contest.title,
+            description:contest.description,
+            startTime:contest.startTime,
+            endTime:contest.endTime,
+            status:getContestStatus(contest),
+            isCreator:contest.createdBy.toString()===req.result._id.toString()
+        }));
+
+        res.status(200).json(result);
+    }
+    catch(err){
+        res.status(500).json({error:err.message});
+    }
+};
+
+const getContestById=async(req,res)=>{
+    const {id}=req.params;
+    try{
+        const contest=await Contest.findById(id).populate('problems.problemId','title problemNumber difficulty');
+        if(!contest){
+            return res.status(404).json({error:"Contest not found"});
+        }
+
+        const status=await publishContestProblemsIfEnded(contest);
+
+        const response={
+            _id:contest._id,
+            title:contest.title,
+            description:contest.description,
+            startTime:contest.startTime,
+            endTime:contest.endTime,
+            status,
+            isCreator:contest.createdBy.toString()===req.result._id.toString()
+        };
+
+        if(status!=='upcoming'){
+            response.problems=contest.problems.map(({problemId,difficulty})=>({
+                _id:problemId._id,
+                title:problemId.title,
+                problemNumber:problemId.problemNumber,
+                difficulty
+            }));
+        }
+
+        res.status(200).json(response);
+    }
+    catch(err){
+        res.status(500).json({error:err.message});
+    }
+};
+
+const updateContest=async(req,res)=>{
+    const {id}=req.params;
+    const {title,description,startTime,endTime}=req.body;
+
+    try{
+        const contest=await Contest.findById(id);
+        if(!contest){
+            return res.status(404).json({error:"Contest not found"});
+        }
+        if(contest.createdBy.toString()!==req.result._id.toString()){
+            return res.status(403).json({error:"Only the contest creator can edit this contest"});
+        }
+        if(getContestStatus(contest)!=='upcoming'){
+            return res.status(400).json({error:"Only contests that have not started yet can be edited"});
+        }
+
+        const newStartTime=startTime?new Date(startTime):contest.startTime;
+        const newEndTime=endTime?new Date(endTime):contest.endTime;
+        if(newEndTime<=newStartTime){
+            return res.status(400).json({error:"endTime must be after startTime"});
+        }
+
+        if(title) contest.title=title;
+        if(description) contest.description=description;
+        contest.startTime=newStartTime;
+        contest.endTime=newEndTime;
+        await contest.save();
+
+        await notify(
+            req.result._id,
+            'contest_updated',
+            'Contest updated successfully',
+            `You updated "${contest.title}".`,
+            `/contest/${contest._id}`
+        );
+
+        res.status(200).json({message:"Contest updated successfully"});
+    }
+    catch(err){
+        res.status(400).json({error:err.message});
+    }
+};
+
+const deleteContest=async(req,res)=>{
+    const {id}=req.params;
+    try{
+        const contest=await Contest.findById(id);
+        if(!contest){
+            return res.status(404).json({error:"Contest not found"});
+        }
+        if(contest.createdBy.toString()!==req.result._id.toString()){
+            return res.status(403).json({error:"Only the contest creator can delete this contest"});
+        }
+        if(getContestStatus(contest)!=='upcoming'){
+            return res.status(400).json({error:"Only contests that have not started yet can be deleted"});
+        }
+
+        await Problem.deleteMany({contestId:id});
+        await Contest.findByIdAndDelete(id);
+
+        res.status(200).json({message:"Contest deleted successfully"});
+    }
+    catch(err){
+        res.status(500).json({error:err.message});
+    }
+};
+
+module.exports={createContest,getAllContests,getContestById,updateContest,deleteContest,publishContestProblemsIfEnded};

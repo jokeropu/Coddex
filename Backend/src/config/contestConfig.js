@@ -1,0 +1,7 @@
+module.exports = {
+    STARTING_RATING: 500,
+    MIN_PARTICIPANTS_FOR_RATED: 3,
+    MAX_SCORE: { easy: 500, medium: 1000, hard: 1500 },
+    FLOOR_PERCENTAGE: 0.3,
+    PENALTY_PER_WRONG_SUBMISSION: 50,
+};
