@@ -115,7 +115,7 @@ export function GoogleBlock({ children }) {
           around the button on a dark card. Clipping to the button's own
           rounded corners hides that without touching Google's markup. */}
       <div ref={slot} className="flex justify-center">
-        <div className="inline-block overflow-hidden rounded-[4px] border-2 border-line">
+        <div className="inline-block overflow-hidden rounded-[4px] border-2 border-white">
           {children}
         </div>
       </div>
