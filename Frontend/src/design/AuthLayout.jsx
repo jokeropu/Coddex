@@ -110,8 +110,14 @@ export function GoogleBlock({ children }) {
         <span className="t-micro text-ink-3">or</span>
         <div className="h-px flex-1 bg-rule" aria-hidden />
       </div>
+      {/* Google's own iframe often has a slightly larger white bounding box
+          than the button graphic it draws, which shows as a pale sliver
+          around the button on a dark card. Clipping to the button's own
+          rounded corners hides that without touching Google's markup. */}
       <div ref={slot} className="flex justify-center">
-        {children}
+        <div className="inline-block overflow-hidden rounded-[4px]">
+          {children}
+        </div>
       </div>
     </div>
   );
