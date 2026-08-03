@@ -115,7 +115,7 @@ export function GoogleBlock({ children }) {
           around the button on a dark card. Clipping to the button's own
           rounded corners hides that without touching Google's markup. */}
       <div ref={slot} className="flex justify-center">
-        <div className="inline-block overflow-hidden rounded-[4px]">
+        <div className="inline-block overflow-hidden rounded-[4px] border border-white">
           {children}
         </div>
       </div>
@@ -147,7 +147,7 @@ export function PasswordField({ register, name, placeholder, invalid, autoComple
   );
 }
 
-export default function AuthLayout({ title, subtitle, pageRef, children, footer }) {
+export default function AuthLayout({ title, subtitle, children, footer }) {
   const { ground, toggle } = useGround();
 
   return (
@@ -182,9 +182,8 @@ export default function AuthLayout({ title, subtitle, pageRef, children, footer 
 
           {children}
 
-          <div className="mt-6 flex items-center gap-3 border-t border-rule pt-4">
-            <span className="t-data shrink-0 text-ink-3">{pageRef}</span>
-            <div className="min-w-0 flex-1">{footer}</div>
+          <div className="mt-6 border-t border-rule pt-4 text-center">
+            {footer}
           </div>
         </div>
 

@@ -40,9 +40,8 @@ function ForgotPassword() {
         <AuthLayout
             title="Reset your password"
             subtitle="We’ll email you a link to set a new one."
-            pageRef="AUTH-03"
             footer={
-                <span className="t-body-sm text-ink-3">
+                <span className="t-body text-ink-3">
                     Remembered it?{' '}
                     <Link to="/login" className="font-semibold text-line underline-offset-2 hover:underline">
                         Sign in

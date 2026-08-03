@@ -69,9 +69,8 @@ function ResetPassword() {
         <AuthLayout
             title="Set a new password"
             subtitle="Choose something you haven’t used here before."
-            pageRef="AUTH-04"
             footer={
-                <Link to="/login" className="t-body-sm font-semibold text-line underline-offset-2 hover:underline">
+                <Link to="/login" className="t-body font-semibold text-line underline-offset-2 hover:underline">
                     Back to sign in
                 </Link>
             }

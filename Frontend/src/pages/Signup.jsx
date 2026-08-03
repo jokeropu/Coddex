@@ -75,9 +75,8 @@ function Signup() {
         <AuthLayout
             title="Create an account"
             subtitle="Free to start. Your first problem is a minute away."
-            pageRef="AUTH-02"
             footer={
-                <span className="t-body-sm text-ink-3">
+                <span className="t-body text-ink-3">
                     Already registered?{' '}
                     <Link to="/login" className="font-semibold text-line underline-offset-2 hover:underline">
                         Log in

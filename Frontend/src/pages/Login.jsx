@@ -48,9 +48,8 @@ function Login() {
         <AuthLayout
             title="Log in"
             subtitle="Welcome back. Pick up where your last draft left off."
-            pageRef="AUTH-01"
             footer={
-                <span className="t-body-sm text-ink-3">
+                <span className="t-body text-ink-3">
                     New to Coddex?{' '}
                     <Link to="/signup" className="font-semibold text-line underline-offset-2 hover:underline">
                         Create an account
