@@ -10,6 +10,14 @@ const redisClient=require("../config/redis");
 const {effectiveStreakForDisplay}=require("../utils/dailyChallengeSelection");
 const verifyTurnstileToken=require("../utils/verifyTurnstile");
 const sendEmail=require("../utils/sendEmail");
+
+const isProd=process.env.NODE_ENV==="production";
+const authCookieOptions=(maxAge)=>({
+    maxAge,
+    httpOnly:true,
+    secure:isProd,
+    sameSite:isProd?"none":"lax",
+});
 const notify=require("../utils/notify");
 const cloudinary=require('cloudinary').v2;
 
@@ -50,7 +58,7 @@ const register=async(req,res)=>{
             linkedinUrl:user.linkedinUrl
         }
 
-        res.cookie('token',token,{maxAge:3600*1000});
+        res.cookie('token',token,authCookieOptions(3600*1000));
         res.status(201).json({
             user:reply,
             message:"User registered successfully"
@@ -101,7 +109,7 @@ const login=async(req,res)=>{
 
         const token=jwt.sign({_id:user._id,emailId:emailId,role:user.role},process.env.JWT_KEY,{expiresIn:3600});
 
-        res.cookie('token',token,{maxAge:3600*1000});
+        res.cookie('token',token,authCookieOptions(3600*1000));
         res.status(201).json({
             user:reply,
             message:"Logged In successfully"
@@ -170,7 +178,7 @@ const googleAuth=async(req,res)=>{
             linkedinUrl:user.linkedinUrl
         }
 
-        res.cookie('token',token,{maxAge:3600*1000});
+        res.cookie('token',token,authCookieOptions(3600*1000));
         res.status(200).json({
             user:reply,
             message:"Logged in with Google successfully"
@@ -255,7 +263,7 @@ const logout=async(req,res)=>{
         await redisClient.set(`token:${token}`,'Blocked');
         await redisClient.expireAt(`token:${token}`,payload.exp);
 
-        res.cookie("token",null,{expires:new Date(Date.now())});
+        res.cookie("token",null,{...authCookieOptions(0),expires:new Date(Date.now())});
         res.send("User logged out successfully");
     }
     catch(err){
@@ -273,7 +281,7 @@ const adminRegister=async(req,res)=>{
 
         const token=jwt.sign({_id:user._id,emailId:emailId,role:user.role},process.env.JWT_KEY,{expiresIn:3600});
 
-        res.cookie('token',token,{maxAge:3600*1000});
+        res.cookie('token',token,authCookieOptions(3600*1000));
         res.status(201).send("Admin registered successfully");
     }
     catch(err){
