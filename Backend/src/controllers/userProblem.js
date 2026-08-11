@@ -206,10 +206,7 @@ const getAllProblem=async(req,res)=>{
         const {page}=req.query;
 
         if(!page){
-            const getProblem=await Problem.find({}).select("_id title difficulty tags problemNumber").sort({problemNumber:1});
-            if(getProblem.length==0){
-                return res.status(404).send("Problem ID is not present in DB");
-            }
+            const getProblem=await Problem.find({visibleInProblemList:{$ne:false}}).select("_id title difficulty tags problemNumber").sort({problemNumber:1});
             return res.status(200).send(getProblem);
         }
 
