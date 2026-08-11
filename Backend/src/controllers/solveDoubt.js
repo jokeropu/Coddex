@@ -106,7 +106,7 @@ const solveDoubt=async(req,res)=>{
                 systemInstruction:buildSystemInstruction({title,description,testCases,startCode,userCode,language}),
                 temperature:0.4,
                 maxOutputTokens:1400,
-                thinkingConfig:{thinkingBudget:0}
+                thinkingConfig:{thinkingBudget:128}
             }
         });
 
