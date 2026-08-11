@@ -375,6 +375,35 @@ const ProblemPage = () => {
     }
   };
 
+  const renderActionBar = (backLabel, backTab) => (
+    <div className="p-3 border-t border-rule bg-sheet-sunk flex justify-between shrink-0">
+      <div className="flex gap-2">
+        <button className="btn-quiet" onClick={() => setActiveRightTab(backTab)}>
+          {backLabel}
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <button className="btn-outline-x gap-1.5" onClick={handleRun} disabled={loading}>
+          {!loading && (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          Run
+        </button>
+        <button className="btn-line gap-1.5" onClick={handleSubmitCode} disabled={loading}>
+          {!loading && (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+          Submit
+        </button>
+      </div>
+    </div>
+  );
+
   const getLanguageForMonaco = (lang) => {
     switch (lang) {
       case 'javascript': return 'javascript';
@@ -653,49 +682,14 @@ const ProblemPage = () => {
                 />
               </div>
 
-              <div className="p-3 border-t border-rule bg-sheet-sunk flex justify-between shrink-0">
-                <div className="flex gap-2">
-                  <button
-                    className="btn-quiet"
-                    onClick={() => setActiveRightTab('testcase')}
-                  >
-                    Console
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    className={'btn-outline-x gap-1.5'}
-                    onClick={handleRun}
-                    disabled={loading}
-                  >
-                    {!loading && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                    Run
-                  </button>
-                  <button
-                    className={'btn-line gap-1.5'}
-                    onClick={handleSubmitCode}
-                    disabled={loading}
-                  >
-                    {!loading && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                    Submit
-                  </button>
-                </div>
-              </div>
+              {renderActionBar('Console', 'testcase')}
             </div>
           )}
 
           {activeRightTab === 'testcase' && (
-            <div className="flex-1 p-4 overflow-y-auto">
-              <h3 className="font-semibold mb-4">Test Results</h3>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 overflow-y-auto p-4">
+                <h3 className="font-semibold mb-4">Test Results</h3>
               {runResult ? (
                 <div className="mb-4 space-y-3">
                   <VerdictBanner
@@ -723,17 +717,20 @@ const ProblemPage = () => {
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="text-center py-16 text-ink-3">
-                  <p>Click "Run" to test your code with the example test cases.</p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-16 text-ink-3">
+                    <p>Click "Run" to test your code with the example test cases.</p>
+                  </div>
+                )}
+              </div>
+              {renderActionBar('Code', 'code')}
             </div>
           )}
 
           {activeRightTab === 'result' && (
-            <div className="flex-1 p-4 overflow-y-auto">
-              <h3 className="font-semibold mb-4">Submission Result</h3>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 overflow-y-auto p-4">
+                <h3 className="font-semibold mb-4">Submission Result</h3>
               {submitResult ? (
                 <VerdictBanner
                   ok={!!submitResult.accepted}
@@ -756,11 +753,13 @@ const ProblemPage = () => {
                       : []
                   }
                 />
-              ) : (
-                <div className="text-center py-16 text-ink-3">
-                  <p>Click "Submit" to submit your solution for evaluation.</p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-16 text-ink-3">
+                    <p>Click "Submit" to submit your solution for evaluation.</p>
+                  </div>
+                )}
+              </div>
+              {renderActionBar('Code', 'code')}
             </div>
           )}
         </div>
