@@ -48,7 +48,10 @@ const notificationSchema=new Schema({
     timestamps:true
 });
 
+const NOTIFICATION_TTL_SECONDS=60*60*24*30;
+
 notificationSchema.index({userId:1,createdAt:-1});
+notificationSchema.index({createdAt:1},{expireAfterSeconds:NOTIFICATION_TTL_SECONDS});
 
 const Notification=mongoose.model("notification",notificationSchema);
 module.exports=Notification;

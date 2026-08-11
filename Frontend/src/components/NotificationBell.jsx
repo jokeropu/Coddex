@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Bell, AlarmClock, Trophy, ClipboardList, CheckSquare, Flame,
@@ -7,7 +7,7 @@ import {
 import * as Popover from '@radix-ui/react-popover';
 import axiosClient from '../utils/axiosClient';
 import { cn } from '../design/cn';
-import { Plotter, EmptySheet, Rule } from '../design/primitives';
+import { Plotter, EmptySheet } from '../design/primitives';
 
 const TYPE_ICON = {
   contest_reminder: AlarmClock,
@@ -53,26 +53,62 @@ const NotificationBell = () => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
-  const fetchNotifications = async () => {
+  const pageRef = useRef(1);
+
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axiosClient.get('/notifications');
+      const { data } = await axiosClient.get('/notifications', { params: { page: 1 } });
+      pageRef.current = 1;
       setNotifications(data.notifications);
       setUnreadCount(data.unreadCount);
+      setHasMore((data.totalPages || 1) > 1);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const pollNotifications = useCallback(async () => {
+    try {
+      const { data } = await axiosClient.get('/notifications', { params: { page: 1 } });
+      setUnreadCount(data.unreadCount);
+      if (pageRef.current === 1) setNotifications(data.notifications);
+      setHasMore(pageRef.current < (data.totalPages || 1));
+    } catch (error) {
+      console.error('Failed to refresh notifications:', error);
+    }
+  }, []);
+
+  const loadOlder = useCallback(async () => {
+    const nextPage = pageRef.current + 1;
+    setLoadingOlder(true);
+    try {
+      const { data } = await axiosClient.get('/notifications', { params: { page: nextPage } });
+      pageRef.current = data.currentPage || nextPage;
+      setNotifications((prev) => {
+        const seen = new Set(prev.map((n) => n._id));
+        return [...prev, ...data.notifications.filter((n) => !seen.has(n._id))];
+      });
+      setUnreadCount(data.unreadCount);
+      setHasMore(pageRef.current < (data.totalPages || 1));
+    } catch (error) {
+      console.error('Failed to load older notifications:', error);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
+    const interval = setInterval(pollNotifications, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchNotifications, pollNotifications]);
 
   const handleOpenChange = (next) => {
     setOpen(next);
@@ -178,6 +214,16 @@ const NotificationBell = () => {
                   </button>
                 );
               })
+            )}
+
+            {notifications.length > 0 && hasMore && (
+              <button
+                onClick={loadOlder}
+                disabled={loadingOlder}
+                className="t-micro w-full border-t border-rule-faint px-3 py-2.5 text-ink-3 transition-colors hover:bg-sheet-hover hover:text-ink disabled:opacity-60"
+              >
+                {loadingOlder ? 'Loading…' : 'Load older notices'}
+              </button>
             )}
           </div>
         </Popover.Content>
