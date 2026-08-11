@@ -43,7 +43,7 @@ const processContestRatings=async(contest)=>{
     const ratingByUserId=new Map(users.map((u)=>[u._id.toString(),u.contestRating]));
 
     const participants=ranked.map((p)=>({
-        rating:ratingByUserId.get(p.userId.toString()) ?? 500,
+        rating:p.ratingBefore ?? ratingByUserId.get(p.userId.toString()) ?? 500,
         rank:p.rank
     }));
 
@@ -56,17 +56,19 @@ const processContestRatings=async(contest)=>{
         const ratingDelta=deltas[i];
         const ratingAfter=Math.max(0,ratingBefore+ratingDelta);
 
-        p.ratingBefore=ratingBefore;
-        p.ratingDelta=ratingDelta;
-        p.ratingAfter=ratingAfter;
-        await p.save();
+        const claimed=await ContestParticipation.findOneAndUpdate(
+            {_id:p._id,ratingDelta:null},
+            {$set:{rank:p.rank,ratingBefore,ratingAfter,ratingDelta}}
+        );
 
-        const creditsEarned=creditsForRank(p.rank);
+        const creditsEarned=claimed ? creditsForRank(p.rank) : 0;
         const update={$set:{contestRating:ratingAfter}};
         if(creditsEarned>0){
             update.$inc={credits:creditsEarned};
         }
         await User.updateOne({_id:p.userId},update);
+
+        if(!claimed) continue;
 
         const ratingText=ratingDelta>=0 ? `+${ratingDelta}` : `${ratingDelta}`;
         const creditsText=creditsEarned>0 ? ` and +${creditsEarned} credits` : '';
