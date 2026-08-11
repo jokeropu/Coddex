@@ -4,17 +4,7 @@ const Problem=require('../models/problem');
 const User=require('../models/user');
 const SolutionVideo=require('../models/solutionVideo');
 const {extractYoutubeId,fetchYoutubeMeta}=require('../utils/youtube');
-
-const discardVideo=async(video)=>{
-    if(!video) return;
-
-    if(video.cloudinaryPublicId){
-        await cloudinary.uploader
-            .destroy(video.cloudinaryPublicId,{resource_type:'video',invalidate:true})
-            .catch((err)=>console.error('Could not remove old Cloudinary asset:',err.message));
-    }
-    await video.deleteOne().catch((err)=>console.error('Could not remove old walkthrough:',err.message));
-};
+const {discardWalkthrough,attachYoutubeWalkthrough}=require('../utils/walkthrough');
 
 cloudinary.config({
     cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
@@ -94,7 +84,7 @@ const saveVideoMetadata=async(req,res)=>{
             thumbnailUrl
         });
 
-        await discardVideo(previous);
+        await discardWalkthrough(previous);
 
         res.status(201).json({
             message:"Video solution saved successfully",
@@ -135,20 +125,7 @@ const saveYoutubeVideo=async(req,res)=>{
             return res.status(err.rejectedByYoutube?400:502).json({error:err.message});
         }
 
-        const previous=await SolutionVideo.findOne({problemId});
-
-        const videoSolution=await SolutionVideo.create({
-            problemId,
-            userId,
-            provider:'youtube',
-            youtubeId,
-            sourceUrl:meta.watchUrl,
-            title:meta.title,
-            author:meta.author,
-            thumbnailUrl:meta.thumbnailUrl
-        });
-
-        await discardVideo(previous);
+        const videoSolution=await attachYoutubeWalkthrough({problemId,userId,youtubeId,meta});
 
         res.status(201).json({
             message:"YouTube walkthrough linked successfully",

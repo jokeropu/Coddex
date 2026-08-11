@@ -5,9 +5,10 @@ import { ArrowLeft } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import AppShell from '../design/AppShell';
 import { toast } from '../design/Toaster';
+import { problemNo } from '../design/cn';
 import {
   Module, ModuleHead, PageHeader, PageBody, Button, Input, Textarea,
-  FormRow, Note, Plotter, EmptySheet,
+  FormRow, Note, Plotter, EmptySheet, DifficultyMark,
 } from '../design/primitives';
 
 const toDatetimeLocal = (isoString) => {
@@ -37,6 +38,10 @@ function AdminContestEdit() {
             description: data.description,
             startTime: toDatetimeLocal(data.startTime),
             endTime: toDatetimeLocal(data.endTime),
+            walkthroughs: (data.problems || []).map((p) => ({
+              problemId: p._id,
+              url: p.walkthrough?.url || '',
+            })),
           });
         }
       } catch (err) {
@@ -98,7 +103,7 @@ function AdminContestEdit() {
       <PageBody width="max-w-2xl">
         <PageHeader
           title="Edit contest"
-          detail="Title, description and timing can change until the contest opens. The three problems are fixed once created."
+          detail="Title, description, timing and walkthroughs can change until the contest opens. The three problems themselves are fixed once created."
           actions={backAction}
         />
 
@@ -136,6 +141,43 @@ function AdminContestEdit() {
                 />
               </FormRow>
             </div>
+
+            {contest.problems?.length > 0 && (
+              <div className="flex flex-col gap-4 border-t border-rule-faint pt-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="t-label text-ink-2">Walkthroughs</span>
+                  <span className="t-micro text-ink-3">optional</span>
+                </div>
+
+                <p className="t-body-sm -mt-2 text-ink-3">
+                  A walkthrough stays hidden until this contest closes, then publishes with its
+                  problem. Clear a field to remove one.
+                </p>
+
+                {contest.problems.map((problem, index) => (
+                  <div key={problem._id} className="flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="t-data text-ink-3">{problemNo(problem.problemNumber)}</span>
+                      <span className="t-body min-w-0 truncate font-semibold text-ink">{problem.title}</span>
+                      <DifficultyMark difficulty={problem.difficulty} />
+                    </div>
+
+                    <input type="hidden" {...register(`walkthroughs.${index}.problemId`)} />
+                    <Input
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      {...register(`walkthroughs.${index}.url`)}
+                    />
+
+                    {problem.walkthrough?.title && (
+                      <span className="t-body-sm text-ink-3">
+                        Currently: {problem.walkthrough.title}
+                        {problem.walkthrough.author && ` — ${problem.walkthrough.author}`}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <Button type="submit" tone="line" size="lg" className="w-full" loading={isSubmitting}>
               Save changes
