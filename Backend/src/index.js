@@ -19,6 +19,8 @@ const unlockRouter=require('./routes/unlock');
 const notificationRouter=require('./routes/notification');
 const cors=require('cors');
 
+app.set('trust proxy',1);
+
 const allowedOrigins=(process.env.CLIENT_URL || 'http://localhost:5173')
     .split(',')
     .map(o=>o.trim());

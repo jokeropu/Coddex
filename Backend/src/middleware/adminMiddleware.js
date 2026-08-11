@@ -1,6 +1,7 @@
 const jwt=require('jsonwebtoken');
 const User=require('../models/user');
 const redisClient=require('../config/redis');
+const {renewIfStale}=require('../utils/authToken');
 const adminMiddleware=async(req,res,next)=>{
     try{
         const {token}=req.cookies;
@@ -28,6 +29,8 @@ const adminMiddleware=async(req,res,next)=>{
         if(isBlocked){
             throw new Error("Invalid Token");
         }
+        renewIfStale(res,payload,result);
+
         req.result=result;
         next();
     }

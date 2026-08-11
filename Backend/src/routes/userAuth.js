@@ -5,14 +5,15 @@ const {register,login,googleAuth,forgotPassword,resetPassword,logout,adminRegist
 const {generateAvatarUploadSignature,updateProfile}=require('../controllers/userSettings');
 const userMiddleware=require("../middleware/userMiddleware");
 const adminMiddleware=require("../middleware/adminMiddleware");
+const {loginLimiter,registerLimiter,forgotPasswordLimiter,resetPasswordLimiter}=require("../middleware/rateLimiter");
 const {effectiveStreakForDisplay}=require("../utils/dailyChallengeSelection");
 const {runLazyNotificationChecks}=require("../utils/lazyNotificationChecks");
 
-authRouter.post('/register',register);
-authRouter.post('/login',login);
-authRouter.post('/google',googleAuth);
-authRouter.post('/forgotPassword',forgotPassword);
-authRouter.post('/resetPassword/:token',resetPassword);
+authRouter.post('/register',registerLimiter,register);
+authRouter.post('/login',loginLimiter,login);
+authRouter.post('/google',registerLimiter,googleAuth);
+authRouter.post('/forgotPassword',forgotPasswordLimiter,forgotPassword);
+authRouter.post('/resetPassword/:token',resetPasswordLimiter,resetPassword);
 authRouter.post('/logout',userMiddleware,logout);
 authRouter.post('/admin/register',adminMiddleware,adminRegister);
 authRouter.get('/avatar/signature',userMiddleware,generateAvatarUploadSignature);

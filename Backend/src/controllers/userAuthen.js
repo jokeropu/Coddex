@@ -9,15 +9,10 @@ const Submission=require("../models/submission");
 const redisClient=require("../config/redis");
 const {effectiveStreakForDisplay}=require("../utils/dailyChallengeSelection");
 const verifyTurnstileToken=require("../utils/verifyTurnstile");
+const {recordFailedLogin,clearFailedLogins}=require("../middleware/rateLimiter");
 const sendEmail=require("../utils/sendEmail");
 
-const isProd=process.env.NODE_ENV==="production";
-const authCookieOptions=(maxAge)=>({
-    maxAge,
-    httpOnly:true,
-    secure:isProd,
-    sameSite:isProd?"none":"lax",
-});
+const {issueAuthCookie,clearAuthCookie}=require("../utils/authToken");
 const notify=require("../utils/notify");
 const cloudinary=require('cloudinary').v2;
 
@@ -43,8 +38,6 @@ const register=async(req,res)=>{
 
         const user=await User.create(req.body);
 
-        const token=jwt.sign({_id:user._id,emailId:emailId,role:"user"},process.env.JWT_KEY,{expiresIn:3600});
-
         const reply={
             firstName:user.firstName,
             emailId:user.emailId,
@@ -58,7 +51,7 @@ const register=async(req,res)=>{
             linkedinUrl:user.linkedinUrl
         }
 
-        res.cookie('token',token,authCookieOptions(3600*1000));
+        issueAuthCookie(res,user);
         res.status(201).json({
             user:reply,
             message:"User registered successfully"
@@ -86,13 +79,17 @@ const login=async(req,res)=>{
         }
         const user=await User.findOne({emailId:emailId.trim().toLowerCase()});
         if(!user){
+            await recordFailedLogin(emailId);
             throw new Error("Invalid Credentials");
         }
         const match=await bcrypt.compare(password,user.password);
 
         if(!match){
+            await recordFailedLogin(emailId);
             throw new Error("Invalid Credentials");
         }
+
+        await clearFailedLogins(emailId);
 
         const reply={
             firstName:user.firstName,
@@ -107,9 +104,7 @@ const login=async(req,res)=>{
             linkedinUrl:user.linkedinUrl
         }
 
-        const token=jwt.sign({_id:user._id,emailId:emailId,role:user.role},process.env.JWT_KEY,{expiresIn:3600});
-
-        res.cookie('token',token,authCookieOptions(3600*1000));
+        issueAuthCookie(res,user);
         res.status(201).json({
             user:reply,
             message:"Logged In successfully"
@@ -163,8 +158,6 @@ const googleAuth=async(req,res)=>{
             });
         }
 
-        const token=jwt.sign({_id:user._id,emailId:user.emailId,role:user.role},process.env.JWT_KEY,{expiresIn:3600});
-
         const reply={
             firstName:user.firstName,
             emailId:user.emailId,
@@ -178,7 +171,7 @@ const googleAuth=async(req,res)=>{
             linkedinUrl:user.linkedinUrl
         }
 
-        res.cookie('token',token,authCookieOptions(3600*1000));
+        issueAuthCookie(res,user);
         res.status(200).json({
             user:reply,
             message:"Logged in with Google successfully"
@@ -263,7 +256,7 @@ const logout=async(req,res)=>{
         await redisClient.set(`token:${token}`,'Blocked');
         await redisClient.expireAt(`token:${token}`,payload.exp);
 
-        res.cookie("token",null,{...authCookieOptions(0),expires:new Date(Date.now())});
+        clearAuthCookie(res);
         res.send("User logged out successfully");
     }
     catch(err){
@@ -279,9 +272,7 @@ const adminRegister=async(req,res)=>{
 
         const user=await User.create(req.body);
 
-        const token=jwt.sign({_id:user._id,emailId:emailId,role:user.role},process.env.JWT_KEY,{expiresIn:3600});
-
-        res.cookie('token',token,authCookieOptions(3600*1000));
+        issueAuthCookie(res,user);
         res.status(201).send("Admin registered successfully");
     }
     catch(err){
