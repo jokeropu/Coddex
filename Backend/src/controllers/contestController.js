@@ -2,7 +2,9 @@ const {getLanguageById,submitBatch,submitToken}=require('../utils/problemUtility
 const Problem=require('../models/problem');
 const Contest=require('../models/contest');
 const User=require('../models/user');
+const SolutionVideo=require('../models/solutionVideo');
 const getContestStatus=require('../utils/contestStatus');
+const {extractYoutubeId,fetchYoutubeMeta}=require('../utils/youtube');
 const notify=require('../utils/notify');
 
 const CONTEST_CREATION_CREDITS=500;
@@ -64,6 +66,28 @@ const createContest=async(req,res)=>{
             return res.status(400).json({error:"Problems must be exactly one easy, one medium, and one hard"});
         }
 
+        const walkthroughs=[];
+        for(const problem of problems){
+            if(!problem.walkthroughUrl || !String(problem.walkthroughUrl).trim()){
+                walkthroughs.push(null);
+                continue;
+            }
+
+            const youtubeId=extractYoutubeId(problem.walkthroughUrl);
+            if(!youtubeId){
+                return res.status(400).json({error:`The walkthrough link for the ${problem.difficulty} problem is not a YouTube link.`});
+            }
+
+            try{
+                walkthroughs.push({youtubeId,...await fetchYoutubeMeta(youtubeId)});
+            }
+            catch(err){
+                return res.status(err.rejectedByYoutube?400:502).json({
+                    error:`Walkthrough for the ${problem.difficulty} problem: ${err.message}`
+                });
+            }
+        }
+
         for(const problem of problems){
             await verifyReferenceSolutions(problem.visibleTestCases,problem.referenceSolution);
         }
@@ -78,17 +102,33 @@ const createContest=async(req,res)=>{
         });
 
         const createdProblems=[];
-        for(const problem of problems){
+        for(const [index,problem] of problems.entries()){
             const lastProblem=await Problem.findOne().sort({problemNumber:-1}).select('problemNumber');
             const problemNumber=lastProblem?.problemNumber ? lastProblem.problemNumber+1 : 1;
 
+            const {walkthroughUrl,...problemFields}=problem;
+
             const createdProblem=await Problem.create({
-                ...problem,
+                ...problemFields,
                 problemNumber,
                 problemCreator:req.result._id,
                 contestId:contest._id,
                 visibleInProblemList:false
             });
+
+            const walkthrough=walkthroughs[index];
+            if(walkthrough){
+                await SolutionVideo.create({
+                    problemId:createdProblem._id,
+                    userId:req.result._id,
+                    provider:'youtube',
+                    youtubeId:walkthrough.youtubeId,
+                    sourceUrl:walkthrough.watchUrl,
+                    title:walkthrough.title,
+                    author:walkthrough.author,
+                    thumbnailUrl:walkthrough.thumbnailUrl
+                });
+            }
 
             createdProblems.push({problemId:createdProblem._id,difficulty:createdProblem.difficulty});
         }

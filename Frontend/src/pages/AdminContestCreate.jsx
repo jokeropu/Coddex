@@ -143,6 +143,7 @@ function AdminContestCreate() {
         lockedDifficulty={step}
         steps={STEP_LABELS}
         currentStep={stepIndex}
+        allowWalkthrough
         onSubmit={(data) => handleProblemSubmit(step, data)}
       />
     </>

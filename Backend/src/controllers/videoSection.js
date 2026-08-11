@@ -1,18 +1,9 @@
 const cloudinary=require('cloudinary').v2
-const axios=require('axios');
 
 const Problem=require('../models/problem');
 const User=require('../models/user');
 const SolutionVideo=require('../models/solutionVideo');
-
-const YOUTUBE_ID=/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
-
-const extractYoutubeId=(url)=>{
-    const trimmed=String(url||'').trim();
-    const match=trimmed.match(YOUTUBE_ID);
-    if(match) return match[1];
-    return /^[A-Za-z0-9_-]{11}$/.test(trimmed) ? trimmed : null;
-};
+const {extractYoutubeId,fetchYoutubeMeta}=require('../utils/youtube');
 
 const discardVideo=async(video)=>{
     if(!video) return;
@@ -136,24 +127,12 @@ const saveYoutubeVideo=async(req,res)=>{
             return res.status(400).json({error:"That does not look like a YouTube link."});
         }
 
-        const watchUrl=`https://www.youtube.com/watch?v=${youtubeId}`;
-
         let meta;
         try{
-            const {data}=await axios.get('https://www.youtube.com/oembed',{
-                params:{url:watchUrl,format:'json'},
-                timeout:10000
-            });
-            meta=data;
+            meta=await fetchYoutubeMeta(youtubeId);
         }
         catch(err){
-            const status=err.response?.status;
-            const rejectedByYoutube=status===400 || status===404;
-            return res.status(rejectedByYoutube?400:502).json({
-                error:rejectedByYoutube
-                    ? "That video does not exist, is private, or its uploader has disabled embedding."
-                    : "Could not reach YouTube to verify that link. Try again in a moment."
-            });
+            return res.status(err.rejectedByYoutube?400:502).json({error:err.message});
         }
 
         const previous=await SolutionVideo.findOne({problemId});
@@ -163,10 +142,10 @@ const saveYoutubeVideo=async(req,res)=>{
             userId,
             provider:'youtube',
             youtubeId,
-            sourceUrl:watchUrl,
+            sourceUrl:meta.watchUrl,
             title:meta.title,
-            author:meta.author_name,
-            thumbnailUrl:meta.thumbnail_url
+            author:meta.author,
+            thumbnailUrl:meta.thumbnailUrl
         });
 
         await discardVideo(previous);

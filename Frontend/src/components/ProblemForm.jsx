@@ -59,12 +59,20 @@ const problemSchema = z.object({
   hints: z
     .array(z.object({ text: z.string().min(1, 'Hint cannot be empty') }))
     .min(1, 'At least one hint is required'),
+  walkthroughUrl: z
+    .string()
+    .refine(
+      (v) => !v.trim() || /(?:youtube\.com|youtu\.be)/.test(v),
+      'That does not look like a YouTube link'
+    )
+    .optional(),
 });
 
 const defaultFormValues = {
   startCode: SUPPORTED_LANGUAGES.map((language) => ({ language, initialCode: '' })),
   referenceSolution: SUPPORTED_LANGUAGES.map((language) => ({ language, completeCode: '' })),
   hints: [],
+  walkthroughUrl: '',
 };
 
 const alignByLanguage = (entries, codeKey) =>
@@ -124,6 +132,7 @@ function ProblemForm({
   lockedDifficulty,
   steps,
   currentStep,
+  allowWalkthrough = false,
 }) {
   const resolvedDefaults =
     defaultValues || (lockedDifficulty ? { ...defaultFormValues, difficulty: lockedDifficulty } : defaultFormValues);
@@ -423,6 +432,32 @@ function ProblemForm({
               ))}
             </div>
           </Module>
+
+          {allowWalkthrough && (
+            <Module ticks>
+              <ModuleHead label="Walkthrough">
+                <span className="t-micro text-ink-3">Optional</span>
+              </ModuleHead>
+
+              <div className="p-4">
+                <FormRow
+                  label="YouTube link"
+                  error={errors.walkthroughUrl?.message}
+                  hint="stays hidden until the contest closes"
+                >
+                  <Input
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    invalid={!!errors.walkthroughUrl}
+                    {...register('walkthroughUrl')}
+                  />
+                </FormRow>
+                <p className="t-body-sm mt-2 text-ink-3">
+                  Attach the video solution now and it publishes with the problem once the
+                  contest ends. Leave it empty to add one later.
+                </p>
+              </div>
+            </Module>
+          )}
 
           <Button type="submit" tone="line" size="lg" className="w-full" loading={isSubmitting}>
             {submitLabel}
