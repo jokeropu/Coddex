@@ -8,7 +8,41 @@ const formatTime = (seconds) => {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
+const YoutubeEditorial = ({ youtubeId, title, author }) => (
+  <div className="flex flex-col gap-2">
+    <div className="w-full border border-rule bg-black">
+      <iframe
+        src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`}
+        title={title || 'Video walkthrough'}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        loading="lazy"
+        referrerPolicy="strict-origin-when-cross-origin"
+        className="aspect-video w-full border-0"
+      />
+    </div>
+    {(title || author) && (
+      <p className="t-body-sm text-ink-3">
+        {title}
+        {author && (
+          <>
+            {title ? ' · ' : ''}
+            <a
+              href={`https://www.youtube.com/watch?v=${youtubeId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-ink-2 underline underline-offset-2 hover:text-line"
+            >
+              {author}
+            </a>
+          </>
+        )}
+      </p>
+    )}
+  </div>
+);
+
+const CloudinaryEditorial = ({ secureUrl, thumbnailUrl, duration }) => {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -115,5 +149,10 @@ const Editorial = ({ secureUrl, thumbnailUrl, duration }) => {
     </div>
   );
 };
+
+const Editorial = ({ provider = 'cloudinary', youtubeId, title, author, ...rest }) =>
+  provider === 'youtube' && youtubeId
+    ? <YoutubeEditorial youtubeId={youtubeId} title={title} author={author} />
+    : <CloudinaryEditorial {...rest} />;
 
 export default Editorial;

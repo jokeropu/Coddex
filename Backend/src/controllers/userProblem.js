@@ -154,7 +154,11 @@ const getProblemById=async(req,res)=>{
             responseData.videoUnlocked=videoUnlocked;
             responseData.videoUnlockCost=VIDEO_UNLOCK_COST;
             if(videoUnlocked){
+                responseData.videoProvider=videos.provider || 'cloudinary';
                 responseData.secureUrl=videos.secureUrl;
+                responseData.youtubeId=videos.youtubeId;
+                responseData.videoTitle=videos.title;
+                responseData.videoAuthor=videos.author;
                 responseData.thumbnailUrl=videos.thumbnailUrl;
                 responseData.duration=videos.duration;
             }

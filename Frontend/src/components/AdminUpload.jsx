@@ -2,11 +2,11 @@ import { useParams, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
-import { Upload, FileVideo, ArrowLeft } from 'lucide-react';
+import { Upload, FileVideo, ArrowLeft, Link2 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import AppShell from '../design/AppShell';
 import {
-  Module, ModuleHead, PageHeader, PageBody, Button, FormRow, Note, Stamp,
+  Module, ModuleHead, PageHeader, PageBody, Button, FormRow, Input, Note, Stamp,
 } from '../design/primitives';
 
 const formatFileSize = (bytes) => {
@@ -27,6 +27,7 @@ function AdminUpload() {
   const { problemId } = useParams();
   const navigate = useNavigate();
 
+  const [mode, setMode] = useState('file');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedVideo, setUploadedVideo] = useState(null);
@@ -42,6 +43,39 @@ function AdminUpload() {
   } = useForm();
 
   const selectedFile = watch('videoFile')?.[0];
+  const youtubeUrl = watch('youtubeUrl');
+
+  const switchMode = (next) => {
+    if (next === mode) return;
+    setMode(next);
+    setUploadedVideo(null);
+    clearErrors();
+    reset();
+  };
+
+  const onLinkYoutube = async (data) => {
+    setUploading(true);
+    clearErrors();
+
+    try {
+      const { data: saved } = await axiosClient.post('/video/youtube', {
+        problemId,
+        url: data.youtubeUrl,
+      });
+      setUploadedVideo(saved.videoSolution);
+      reset();
+    } catch (err) {
+      console.error('YouTube link error:', err);
+      setError('root', {
+        type: 'manual',
+        message:
+          err.response?.data?.error ||
+          'That link could not be verified. Check it and try again.',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const onSubmit = async (data) => {
     const file = data.videoFile[0];
@@ -110,8 +144,85 @@ function AdminUpload() {
         />
 
         <Module ticks>
-          <ModuleHead label="Video file" right={<span className="t-micro text-ink-3">max 100 MB</span>} />
+          <ModuleHead
+            label="Walkthrough source"
+            right={
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  tone={mode === 'file' ? 'line' : 'quiet'}
+                  onClick={() => switchMode('file')}
+                  disabled={uploading}
+                >
+                  <FileVideo className="h-3 w-3" strokeWidth={1.75} />
+                  Upload
+                </Button>
+                <Button
+                  size="sm"
+                  tone={mode === 'youtube' ? 'line' : 'quiet'}
+                  onClick={() => switchMode('youtube')}
+                  disabled={uploading}
+                >
+                  <Link2 className="h-3 w-3" strokeWidth={1.75} />
+                  YouTube
+                </Button>
+              </div>
+            }
+          />
 
+          {mode === 'youtube' ? (
+            <form onSubmit={handleSubmit(onLinkYoutube)} className="flex flex-col gap-4 p-4">
+              <FormRow
+                label="YouTube link"
+                required
+                error={errors.youtubeUrl?.message}
+                hint="uses no storage"
+              >
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  disabled={uploading}
+                  invalid={!!errors.youtubeUrl}
+                  {...register('youtubeUrl', {
+                    required: 'Paste the YouTube link for this walkthrough',
+                    validate: (v) =>
+                      /(?:youtube\.com|youtu\.be)/.test(v || '') ||
+                      'That does not look like a YouTube link',
+                  })}
+                />
+              </FormRow>
+
+              {errors.root && <Note tone="redline">{errors.root.message}</Note>}
+
+              {uploadedVideo && (
+                <div className="flex flex-col items-center gap-3 border border-approved/40 bg-[color-mix(in_srgb,var(--c-approved)_7%,transparent)] px-4 py-5">
+                  <Stamp verdict="approved" label="Linked" sub="Walkthrough saved" />
+                  <div className="flex flex-col items-center gap-0.5 text-center">
+                    {uploadedVideo.title && (
+                      <span className="t-body text-ink">{uploadedVideo.title}</span>
+                    )}
+                    {uploadedVideo.author && (
+                      <span className="t-data text-ink-3">{uploadedVideo.author}</span>
+                    )}
+                  </div>
+                  <Button size="sm" onClick={() => navigate('/admin/video')}>
+                    Back to problems
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                tone="line"
+                size="lg"
+                className="w-full"
+                loading={uploading}
+                disabled={!youtubeUrl}
+              >
+                <Link2 className="h-3.5 w-3.5" strokeWidth={2} />
+                Verify and link
+              </Button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 p-4">
             <FormRow label="Choose a file" required error={errors.videoFile?.message}>
               <label
@@ -206,6 +317,7 @@ function AdminUpload() {
               Upload walkthrough
             </Button>
           </form>
+          )}
         </Module>
       </PageBody>
     </AppShell>

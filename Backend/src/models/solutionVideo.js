@@ -12,24 +12,50 @@ const videoSchema=new Schema({
         ref:'user',
         required:true
     },
+    provider:{
+        type:String,
+        enum:['cloudinary','youtube'],
+        default:'cloudinary',
+        required:true
+    },
     cloudinaryPublicId:{
         type:String,
-        required:true,
-        unique:true
+        unique:true,
+        sparse:true
     },
     secureUrl:{
-        type:String,
-        required:true
+        type:String
+    },
+    youtubeId:{
+        type:String
+    },
+    sourceUrl:{
+        type:String
+    },
+    title:{
+        type:String
+    },
+    author:{
+        type:String
     },
     thumbnailUrl:{
         type:String
     },
     duration:{
-        type:Number,
-        required:true
+        type:Number
     },
 },{
     timestamps:true
+});
+
+videoSchema.pre('validate',function(next){
+    if(this.provider==='cloudinary' && (!this.cloudinaryPublicId || !this.secureUrl)){
+        return next(new Error('A Cloudinary walkthrough needs cloudinaryPublicId and secureUrl'));
+    }
+    if(this.provider==='youtube' && !this.youtubeId){
+        return next(new Error('A YouTube walkthrough needs youtubeId'));
+    }
+    next();
 });
 
 const SolutionVideo=mongoose.model("solutionVideo",videoSchema);

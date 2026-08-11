@@ -1,8 +1,30 @@
 const cloudinary=require('cloudinary').v2
+const axios=require('axios');
 
 const Problem=require('../models/problem');
 const User=require('../models/user');
 const SolutionVideo=require('../models/solutionVideo');
+
+const YOUTUBE_ID=/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
+
+const extractYoutubeId=(url)=>{
+    const trimmed=String(url||'').trim();
+    const match=trimmed.match(YOUTUBE_ID);
+    if(match) return match[1];
+    return /^[A-Za-z0-9_-]{11}$/.test(trimmed) ? trimmed : null;
+};
+
+const replaceExistingVideo=async(problemId)=>{
+    const existing=await SolutionVideo.findOne({problemId});
+    if(!existing) return;
+
+    if(existing.cloudinaryPublicId){
+        await cloudinary.uploader
+            .destroy(existing.cloudinaryPublicId,{resource_type:'video',invalidate:true})
+            .catch((err)=>console.error('Could not remove old Cloudinary asset:',err.message));
+    }
+    await existing.deleteOne();
+};
 
 cloudinary.config({
     cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
@@ -68,17 +90,14 @@ const saveVideoMetadata=async(req,res)=>{
             return res.status(400).json({error:"Video not found in Cloudinary"});
         }
 
-        const existingVideo=await SolutionVideo.findOne({problemId});
-        if(existingVideo){
-            await cloudinary.uploader.destroy(existingVideo.cloudinaryPublicId,{resource_type:'video',invalidate:true});
-            await existingVideo.deleteOne();
-        }
+        await replaceExistingVideo(problemId);
 
         const thumbnailUrl=cloudinary.url(cloudinaryResource.public_id,{resource_type:'video',format:'jpg'});
 
         const videoSolution=await SolutionVideo.create({
             problemId,
             userId,
+            provider:'cloudinary',
             cloudinaryPublicId,
             secureUrl,
             duration:cloudinaryResource.duration || duration,
@@ -98,6 +117,73 @@ const saveVideoMetadata=async(req,res)=>{
     catch(err){
         console.error("Error saving video metadata:",err);
         res.status(500).json({error:"Failed to save video metadata"});
+    }
+};
+
+const saveYoutubeVideo=async(req,res)=>{
+    try{
+        const {problemId,url}=req.body;
+        const userId=req.result._id;
+
+        const problem=await Problem.findById(problemId);
+        if(!problem){
+            return res.status(404).json({error:"Problem not found"});
+        }
+
+        const youtubeId=extractYoutubeId(url);
+        if(!youtubeId){
+            return res.status(400).json({error:"That does not look like a YouTube link."});
+        }
+
+        const watchUrl=`https://www.youtube.com/watch?v=${youtubeId}`;
+
+        let meta;
+        try{
+            const {data}=await axios.get('https://www.youtube.com/oembed',{
+                params:{url:watchUrl,format:'json'},
+                timeout:10000
+            });
+            meta=data;
+        }
+        catch(err){
+            const status=err.response?.status;
+            const rejectedByYoutube=status===400 || status===404;
+            return res.status(rejectedByYoutube?400:502).json({
+                error:rejectedByYoutube
+                    ? "That video does not exist, is private, or its uploader has disabled embedding."
+                    : "Could not reach YouTube to verify that link. Try again in a moment."
+            });
+        }
+
+        await replaceExistingVideo(problemId);
+
+        const videoSolution=await SolutionVideo.create({
+            problemId,
+            userId,
+            provider:'youtube',
+            youtubeId,
+            sourceUrl:watchUrl,
+            title:meta.title,
+            author:meta.author_name,
+            thumbnailUrl:meta.thumbnail_url
+        });
+
+        res.status(201).json({
+            message:"YouTube walkthrough linked successfully",
+            videoSolution:{
+                id:videoSolution._id,
+                provider:'youtube',
+                youtubeId,
+                title:videoSolution.title,
+                author:videoSolution.author,
+                thumbnailUrl:videoSolution.thumbnailUrl,
+                uploadedAt:videoSolution.createdAt
+            }
+        });
+    }
+    catch(err){
+        console.error("Error linking YouTube video:",err);
+        res.status(500).json({error:"Failed to link that YouTube video"});
     }
 };
 
@@ -121,4 +207,4 @@ const deleteVideo=async(req,res)=>{
     }
 };
 
-module.exports={listVideoProblemIds,generateUploadSignature,saveVideoMetadata,deleteVideo};
+module.exports={listVideoProblemIds,generateUploadSignature,saveVideoMetadata,saveYoutubeVideo,deleteVideo};

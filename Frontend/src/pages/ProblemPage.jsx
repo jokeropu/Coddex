@@ -481,7 +481,7 @@ const ProblemPage = () => {
                         <p className="text-lg font-semibold">Video Solution Not Available</p>
                         <p className="text-sm text-ink-2">No video walkthrough has been uploaded for this problem yet.</p>
                       </div>
-                    ) : !problem.secureUrl ? (
+                    ) : !problem.videoUnlocked ? (
                       <div className="not-prose flex flex-col items-center text-center gap-4 py-12 px-4 rounded-lg border border-rule bg-sheet-sunk">
                         <p className="text-lg font-semibold">This video solution is for Premium members</p>
                         <p className="text-sm text-ink-2">Subscribe to Coddex Premium, or unlock just this problem's video with credits.</p>
@@ -499,7 +499,15 @@ const ProblemPage = () => {
                         <p className="text-xs text-ink-3">You have {user?.credits ?? 0} credits</p>
                       </div>
                     ) : (
-                      <Editorial secureUrl={problem.secureUrl} thumbnailUrl={problem.thumbnailUrl} duration={problem.duration}/>
+                      <Editorial
+                        provider={problem.videoProvider}
+                        youtubeId={problem.youtubeId}
+                        title={problem.videoTitle}
+                        author={problem.videoAuthor}
+                        secureUrl={problem.secureUrl}
+                        thumbnailUrl={problem.thumbnailUrl}
+                        duration={problem.duration}
+                      />
                     )}
                   </div>
 
