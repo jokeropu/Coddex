@@ -115,7 +115,7 @@ const createContest=async(req,res)=>{
 
 const getAllContests=async(req,res)=>{
     try{
-        const contests=await Contest.find({}).select('title description startTime endTime createdBy problemsPublished').sort({startTime:-1});
+        const contests=await Contest.find({}).select('title description startTime endTime createdBy problemsPublished').sort({startTime:1});
 
         for(const contest of contests){
             await publishContestProblemsIfEnded(contest);
