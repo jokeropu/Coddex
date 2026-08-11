@@ -14,6 +14,12 @@ import { getLocalDraft, setLocalDraft, clearLocalDraft } from '../utils/codeDraf
 import { cn, formatMemory, formatRuntime } from '../design/cn';
 import { Check, X } from 'lucide-react';
 
+const errorMessage = (error, fallback) => {
+  const data = error?.response?.data;
+  if (typeof data === 'string' && data.trim()) return data.replace(/^Error:\s*/, '');
+  return data?.message || data?.error || error?.message || fallback;
+};
+
 const langMap = {
         cpp: 'C++',
         c: 'C',
@@ -337,7 +343,7 @@ const ProblemPage = () => {
       console.error('Error running code:', error);
       setRunResult({
         success: false,
-        error: 'Internal server error'
+        error: errorMessage(error, 'Internal server error')
       });
       setLoading(false);
       setActiveRightTab('testcase');
@@ -360,7 +366,10 @@ const ProblemPage = () => {
 
     } catch (error) {
       console.error('Error submitting code:', error);
-      setSubmitResult(null);
+      setSubmitResult({
+        accepted: false,
+        error: errorMessage(error, 'Your submission could not be processed. Try again.')
+      });
       setLoading(false);
       setActiveRightTab('result');
     }
@@ -546,11 +555,8 @@ const ProblemPage = () => {
               )}
 
               {activeLeftTab === 'chatAI' && (
-                <div className="prose max-w-none h-full flex flex-col">
-                  <h2 className="text-xl font-bold mb-4">Chat with AI</h2>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed flex-1">
-                    <ChatAi problem={problem}></ChatAi>
-                  </div>
+                <div className="flex h-full min-h-0 flex-col">
+                  <ChatAi problem={problem} code={code} language={langMap[selectedLanguage]} />
                 </div>
               )}
             </>
@@ -725,7 +731,7 @@ const ProblemPage = () => {
                   ok={!!submitResult.accepted}
                   title={submitResult.accepted ? 'Accepted' : submitResult.error}
                   detail={
-                    submitResult.accepted
+                    submitResult.accepted || submitResult.totalTestCases === undefined
                       ? undefined
                       : `${submitResult.passedTestCases}/${submitResult.totalTestCases} test cases passed`
                   }
