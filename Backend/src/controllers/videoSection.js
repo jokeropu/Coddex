@@ -14,16 +14,15 @@ const extractYoutubeId=(url)=>{
     return /^[A-Za-z0-9_-]{11}$/.test(trimmed) ? trimmed : null;
 };
 
-const replaceExistingVideo=async(problemId)=>{
-    const existing=await SolutionVideo.findOne({problemId});
-    if(!existing) return;
+const discardVideo=async(video)=>{
+    if(!video) return;
 
-    if(existing.cloudinaryPublicId){
+    if(video.cloudinaryPublicId){
         await cloudinary.uploader
-            .destroy(existing.cloudinaryPublicId,{resource_type:'video',invalidate:true})
+            .destroy(video.cloudinaryPublicId,{resource_type:'video',invalidate:true})
             .catch((err)=>console.error('Could not remove old Cloudinary asset:',err.message));
     }
-    await existing.deleteOne();
+    await video.deleteOne().catch((err)=>console.error('Could not remove old walkthrough:',err.message));
 };
 
 cloudinary.config({
@@ -90,7 +89,7 @@ const saveVideoMetadata=async(req,res)=>{
             return res.status(400).json({error:"Video not found in Cloudinary"});
         }
 
-        await replaceExistingVideo(problemId);
+        const previous=await SolutionVideo.findOne({problemId});
 
         const thumbnailUrl=cloudinary.url(cloudinaryResource.public_id,{resource_type:'video',format:'jpg'});
 
@@ -103,6 +102,8 @@ const saveVideoMetadata=async(req,res)=>{
             duration:cloudinaryResource.duration || duration,
             thumbnailUrl
         });
+
+        await discardVideo(previous);
 
         res.status(201).json({
             message:"Video solution saved successfully",
@@ -155,7 +156,7 @@ const saveYoutubeVideo=async(req,res)=>{
             });
         }
 
-        await replaceExistingVideo(problemId);
+        const previous=await SolutionVideo.findOne({problemId});
 
         const videoSolution=await SolutionVideo.create({
             problemId,
@@ -167,6 +168,8 @@ const saveYoutubeVideo=async(req,res)=>{
             author:meta.author_name,
             thumbnailUrl:meta.thumbnail_url
         });
+
+        await discardVideo(previous);
 
         res.status(201).json({
             message:"YouTube walkthrough linked successfully",

@@ -48,14 +48,13 @@ const videoSchema=new Schema({
     timestamps:true
 });
 
-videoSchema.pre('validate',function(next){
+videoSchema.pre('validate',function(){
     if(this.provider==='cloudinary' && (!this.cloudinaryPublicId || !this.secureUrl)){
-        return next(new Error('A Cloudinary walkthrough needs cloudinaryPublicId and secureUrl'));
+        throw new Error('A Cloudinary walkthrough needs cloudinaryPublicId and secureUrl');
     }
     if(this.provider==='youtube' && !this.youtubeId){
-        return next(new Error('A YouTube walkthrough needs youtubeId'));
+        throw new Error('A YouTube walkthrough needs youtubeId');
     }
-    next();
 });
 
 const SolutionVideo=mongoose.model("solutionVideo",videoSchema);
