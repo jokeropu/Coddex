@@ -13,7 +13,7 @@ import { updateUserProfile } from '../authSlice';
 import { getLocalDraft, setLocalDraft, clearLocalDraft } from '../utils/codeDraftLocal';
 import { cn, formatMemory, formatRuntime } from '../design/cn';
 import { NoCopy, Chip, DifficultyMark } from '../design/primitives';
-import { Check, X, Copy, FlaskConical } from 'lucide-react';
+import { Check, X, Copy } from 'lucide-react';
 
 const errorMessage = (error, fallback) => {
   const data = error?.response?.data;
@@ -168,20 +168,20 @@ const ExampleCard = ({ index, example }) => {
         </button>
       </figcaption>
 
-      <dl className="grid grid-cols-[62px_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2 px-3.5 py-3">
-        <dt className="t-micro text-ink-3">Input</dt>
-        <dd className="t-data sheet-sunk min-w-0 whitespace-pre-wrap break-words px-2.5 py-1.5 text-ink">
+      <dl className="grid grid-cols-[86px_minmax(0,1fr)] gap-x-3 gap-y-2.5 px-3.5 py-3">
+        <dt className="t-body-sm pt-1.5 text-ink-3">Input</dt>
+        <dd className="t-data min-w-0 whitespace-pre-wrap break-words bg-sheet-sunk px-2.5 py-1.5 text-ink">
           {example.input}
         </dd>
 
-        <dt className="t-micro text-ink-3">Output</dt>
-        <dd className="t-data sheet-sunk min-w-0 whitespace-pre-wrap break-words px-2.5 py-1.5 text-approved">
+        <dt className="t-body-sm pt-1.5 text-ink-3">Output</dt>
+        <dd className="t-data min-w-0 whitespace-pre-wrap break-words bg-sheet-sunk px-2.5 py-1.5 text-ink">
           {example.output}
         </dd>
 
         {example.explanation && (
           <>
-            <dt className="t-micro text-ink-3">Why</dt>
+            <dt className="t-body-sm text-ink-3">Explanation</dt>
             <dd className="t-body-sm min-w-0 text-ink-2">{example.explanation}</dd>
           </>
         )}
@@ -508,21 +508,17 @@ const ProblemPage = () => {
                     </h1>
                     <div className="flex flex-wrap items-center gap-2">
                       <DifficultyMark difficulty={problem.difficulty} />
-                      <span className="h-3 w-px bg-rule" aria-hidden />
                       <Chip>{problem.tags}</Chip>
                     </div>
                   </div>
 
-                  <div className="t-prose whitespace-pre-wrap text-ink-2 [&_*]:max-w-full">
+                  <div className="t-prose whitespace-pre-wrap text-ink-2">
                     {problem.description}
                   </div>
 
                   <div className="flex flex-col gap-3">
                     <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="t-h3 flex items-center gap-2 text-ink">
-                        <FlaskConical className="h-3.5 w-3.5 text-line" strokeWidth={1.75} aria-hidden />
-                        Examples
-                      </h3>
+                      <h3 className="t-h3 text-ink">Examples</h3>
                       <span className="t-micro text-ink-3">
                         {problem.visibleTestCases.length} shown · more are hidden
                       </span>
