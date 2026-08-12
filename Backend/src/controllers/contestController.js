@@ -7,7 +7,7 @@ const getContestStatus=require('../utils/contestStatus');
 const {isContestEditable,isContestEntryOpen}=require('../utils/contestStatus');
 const ContestParticipation=require('../models/contestParticipation');
 const {extractYoutubeId,fetchYoutubeMeta}=require('../utils/youtube');
-const {discardWalkthrough,attachYoutubeWalkthrough}=require('../utils/walkthrough');
+const {attachYoutubeWalkthrough}=require('../utils/walkthrough');
 const notify=require('../utils/notify');
 
 const CONTEST_CREATION_CREDITS=500;
@@ -240,7 +240,7 @@ const getContestById=async(req,res)=>{
 
 const updateContest=async(req,res)=>{
     const {id}=req.params;
-    const {title,description,startTime,endTime,walkthroughs}=req.body;
+    const {title,description,startTime,endTime}=req.body;
 
     try{
         const contest=await Contest.findById(id);
@@ -260,53 +260,11 @@ const updateContest=async(req,res)=>{
             return res.status(400).json({error:"endTime must be after startTime"});
         }
 
-        const contestProblemIds=new Set(contest.problems.map((p)=>p.problemId.toString()));
-        const resolved=[];
-
-        for(const entry of (Array.isArray(walkthroughs)?walkthroughs:[])){
-            const problemId=String(entry?.problemId||'');
-            if(!contestProblemIds.has(problemId)){
-                return res.status(400).json({error:"A walkthrough was sent for a problem that is not in this contest."});
-            }
-
-            const url=String(entry?.url||'').trim();
-            if(!url){
-                resolved.push({problemId,clear:true});
-                continue;
-            }
-
-            const youtubeId=extractYoutubeId(url);
-            if(!youtubeId){
-                return res.status(400).json({error:"A walkthrough link is not a YouTube link."});
-            }
-
-            try{
-                resolved.push({problemId,youtubeId,meta:await fetchYoutubeMeta(youtubeId)});
-            }
-            catch(err){
-                return res.status(err.rejectedByYoutube?400:502).json({error:err.message});
-            }
-        }
-
         if(title) contest.title=title;
         if(description) contest.description=description;
         contest.startTime=newStartTime;
         contest.endTime=newEndTime;
         await contest.save();
-
-        for(const item of resolved){
-            if(item.clear){
-                await discardWalkthrough(await SolutionVideo.findOne({problemId:item.problemId}));
-                continue;
-            }
-
-            await attachYoutubeWalkthrough({
-                problemId:item.problemId,
-                userId:req.result._id,
-                youtubeId:item.youtubeId,
-                meta:item.meta
-            });
-        }
 
         await notify(
             req.result._id,

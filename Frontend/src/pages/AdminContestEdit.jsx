@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams, Link } from 'react-router';
-import { ArrowLeft, Pencil, Save } from 'lucide-react';
+import { ArrowLeft, Pencil, Save, Video } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import AppShell from '../design/AppShell';
 import { toast } from '../design/Toaster';
@@ -43,10 +43,6 @@ function AdminContestEdit() {
             description: data.description,
             startTime: toDatetimeLocal(data.startTime),
             endTime: toDatetimeLocal(data.endTime),
-            walkthroughs: (data.problems || []).map((p) => ({
-              problemId: p._id,
-              url: p.walkthrough?.url || '',
-            })),
           });
         }
       } catch (err) {
@@ -161,41 +157,42 @@ function AdminContestEdit() {
 
             {contest.problems?.length > 0 && (
               <div className="flex flex-col gap-4 border-t border-rule-faint pt-4">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="t-label text-ink-2">Problems</span>
-                  <span className="t-micro text-ink-3">walkthrough optional</span>
-                </div>
+                <span className="t-label text-ink-2">Problems</span>
 
                 <p className="t-body-sm -mt-2 text-ink-3">
                   Statements, test cases and solutions stay editable until an hour before the
                   contest opens. A walkthrough stays hidden until it closes, then publishes with
-                  its problem — clear a field to remove one.
+                  its problem.
                 </p>
 
-                {contest.problems.map((problem, index) => (
-                  <div key={problem._id} className="flex flex-col gap-1.5 border border-rule bg-sheet-sunk p-3">
+                {contest.problems.map((problem) => (
+                  <div key={problem._id} className="flex flex-col gap-2 border border-rule bg-sheet-sunk p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="t-data text-ink-3">{problemNo(problem.problemNumber)}</span>
                       <span className="t-body min-w-0 flex-1 truncate font-semibold text-ink">{problem.title}</span>
                       <DifficultyMark difficulty={problem.difficulty} />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <Button size="xs" tone="outline" asChild>
                         <Link to={`/admin/update/${problem._id}`}>
                           <Pencil className="h-3 w-3" strokeWidth={1.75} />
-                          Edit
+                          Edit problem
+                        </Link>
+                      </Button>
+                      <Button size="xs" tone={problem.walkthrough ? 'quiet' : 'outline'} asChild>
+                        <Link to={`/admin/upload/${problem._id}?returnTo=/admin/contest/edit/${contestId}`}>
+                          <Video className="h-3 w-3" strokeWidth={1.75} />
+                          {problem.walkthrough ? 'Replace walkthrough' : 'Add walkthrough'}
                         </Link>
                       </Button>
                     </div>
 
-                    <input type="hidden" {...register(`walkthroughs.${index}.problemId`)} />
-                    <Input
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      {...register(`walkthroughs.${index}.url`)}
-                    />
-
-                    {problem.walkthrough?.title && (
+                    {problem.walkthrough && (
                       <span className="t-body-sm text-ink-3">
-                        Currently: {problem.walkthrough.title}
-                        {problem.walkthrough.author && ` — ${problem.walkthrough.author}`}
+                        {problem.walkthrough.provider === 'youtube'
+                          ? `YouTube — ${problem.walkthrough.title || 'linked'}${problem.walkthrough.author ? ` (${problem.walkthrough.author})` : ''}`
+                          : 'Uploaded to Cloudinary'}
                       </span>
                     )}
                   </div>
@@ -222,7 +219,6 @@ function AdminContestEdit() {
           }
           consequences={[
             'Entrants see the new title, description and timing straight away.',
-            'Walkthrough links are verified and attached, and cleared fields remove theirs.',
             'Editing closes an hour before the contest opens.',
           ]}
           error={saveError}

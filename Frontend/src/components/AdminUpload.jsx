@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
@@ -26,6 +26,10 @@ const formatDuration = (seconds) => {
 function AdminUpload() {
   const { problemId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const returnTo = searchParams.get('returnTo') || '/admin/video';
+  const returnLabel = returnTo === '/admin/video' ? 'Back to problems' : 'Back to contest';
 
   const [mode, setMode] = useState('file');
   const [uploading, setUploading] = useState(false);
@@ -136,7 +140,7 @@ function AdminUpload() {
           title="Attach a walkthrough"
           detail="Upload the video solution for this problem. It becomes Premium content, also unlockable with credits."
           actions={
-            <Button size="sm" tone="quiet" onClick={() => navigate('/admin/video')}>
+            <Button size="sm" tone="quiet" onClick={() => navigate(returnTo)}>
               <ArrowLeft className="h-3 w-3" strokeWidth={2} />
               Back
             </Button>
@@ -204,8 +208,8 @@ function AdminUpload() {
                       <span className="t-data text-ink-3">{uploadedVideo.author}</span>
                     )}
                   </div>
-                  <Button size="sm" onClick={() => navigate('/admin/video')}>
-                    Back to problems
+                  <Button size="sm" onClick={() => navigate(returnTo)}>
+                    {returnLabel}
                   </Button>
                 </div>
               )}
@@ -299,8 +303,8 @@ function AdminUpload() {
                     {new Date(uploadedVideo.uploadedAt).toLocaleString()}
                   </span>
                 </div>
-                <Button size="sm" onClick={() => navigate('/admin/video')}>
-                  Back to problems
+                <Button size="sm" onClick={() => navigate(returnTo)}>
+                  {returnLabel}
                 </Button>
               </div>
             )}
