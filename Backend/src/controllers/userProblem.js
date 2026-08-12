@@ -107,7 +107,7 @@ const updateProblem=async(req,res)=>{
         res.status(200).send(newProblem);
     }
     catch(err){
-        res.status(500).send("Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 
@@ -132,7 +132,7 @@ const deleteProblem=async(req,res)=>{
         res.status(200).send("Problem Deleted Successfully");
     }
     catch(err){
-        res.status(500).send("Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 
@@ -196,7 +196,7 @@ const getProblemById=async(req,res)=>{
         return res.status(200).send(responseData);
     }
     catch(err){
-        res.status(500).send("Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 
@@ -216,7 +216,7 @@ const getProblemByIdAdmin=async(req,res)=>{
         res.status(200).send(getProblem);
     }
     catch(err){
-        res.status(500).send("Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 
@@ -287,7 +287,7 @@ const getAllProblem=async(req,res)=>{
         });
     }
     catch(err){
-        res.status(500).send("Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 
@@ -302,7 +302,7 @@ const solvedAllProblembyUser=async(req,res)=>{
         res.status(200).send(user.problemSolved);
     }
     catch(err){
-        res.status(500).send("Server Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 
@@ -316,7 +316,7 @@ const submittedProblem=async(req,res)=>{
         res.status(200).send(ans);
     }
     catch(err){
-        res.status(500).send("Server Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 

@@ -3,12 +3,14 @@ import axiosClient from './utils/axiosClient'
 import { bulkSyncDrafts } from './utils/codeDraftApi';
 import { getAllLocalDrafts } from './utils/codeDraftLocal';
 
+const stripErrorPrefix=(message)=>String(message||'').replace(/^(?:Error:\s*)+/,'').trim();
+
 const extractErrorMessage=(error)=>{
     const data=error.response?.data;
-    if(typeof data==='string') return data;
-    if(data?.error) return data.error;
-    if(data?.message) return data.message;
-    return error.message;
+    if(typeof data==='string') return stripErrorPrefix(data);
+    if(data?.error) return stripErrorPrefix(data.error);
+    if(data?.message) return stripErrorPrefix(data.message);
+    return stripErrorPrefix(error.message);
 };
 
 export const registerUser=createAsyncThunk(

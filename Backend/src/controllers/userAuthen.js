@@ -28,7 +28,7 @@ const register=async(req,res)=>{
     try{
         const verification=await verifyTurnstileToken(req.body.turnstileToken,req.ip);
         if(!verification.success){
-            return res.status(400).send("Error: Human Verification Failed");
+            return res.status(400).send("Human Verification Failed");
         }
 
         validate(req.body);
@@ -58,7 +58,7 @@ const register=async(req,res)=>{
         });
     }
     catch(err){
-        res.status(400).send("Error: "+err);
+        res.status(400).send(err.message || String(err));
     }
 }
 
@@ -111,7 +111,7 @@ const login=async(req,res)=>{
         });
     }
     catch(err){
-        res.status(401).send("Error: "+err.message);
+        res.status(401).send(err.message);
     }
 }
 
@@ -212,7 +212,7 @@ const forgotPassword=async(req,res)=>{
         res.status(200).send("If that email is registered, a reset link has been sent.");
     }
     catch(err){
-        res.status(400).send("Error: "+err.message);
+        res.status(400).send(err.message);
     }
 }
 
@@ -245,7 +245,7 @@ const resetPassword=async(req,res)=>{
         res.status(200).send("Password has been reset successfully");
     }
     catch(err){
-        res.status(400).send("Error: "+err.message);
+        res.status(400).send(err.message);
     }
 }
 
@@ -260,7 +260,7 @@ const logout=async(req,res)=>{
         res.send("User logged out successfully");
     }
     catch(err){
-        res.status(503).send("Error: "+err);
+        res.status(503).send(err.message || String(err));
     }
 }
 
@@ -276,7 +276,7 @@ const adminRegister=async(req,res)=>{
         res.status(201).send("Admin registered successfully");
     }
     catch(err){
-        res.status(400).send("Error: "+err);
+        res.status(400).send(err.message || String(err));
     }
 }
 
@@ -294,7 +294,7 @@ const deleteProfile=async(req,res)=>{
         res.status(200).send("User profile deleted successfully");
     }
     catch(err){
-        res.status(500).send("Internal Server Error: "+err);
+        res.status(500).send(err.message || String(err));
     }
 }
 
