@@ -6,6 +6,7 @@ import { cn } from '../design/cn';
 import {
   Button, Input, Textarea, Note, Plotter, EmptySheet, Chip, NoCopy,
 } from '../design/primitives';
+import { ConfirmDialog } from '../design/overlays';
 
 const formatDate = (d) =>
   new Date(d).toLocaleString(undefined, {
@@ -45,7 +46,7 @@ const PostNote = ({ post, isReply, currentUser, onLike, onDelete, onReplySubmit 
               size="xs"
               tone="quiet"
               className="shrink-0 text-ink-3 hover:text-redline"
-              onClick={() => onDelete(post._id)}
+              onClick={() => onDelete(post)}
               aria-label="Delete post"
             >
               <Trash2 className="h-3 w-3" strokeWidth={1.75} />
@@ -142,6 +143,10 @@ const Discussion = ({ problemId }) => {
   const [posting, setPosting] = useState(false);
   const [showCodeFields, setShowCodeFields] = useState(false);
 
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   const fetchDiscussion = async () => {
     try {
       setLoading(true);
@@ -206,13 +211,18 @@ const Discussion = ({ problemId }) => {
     }
   };
 
-  const handleDelete = async (postId) => {
-    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError('');
     try {
-      await axiosClient.delete(`/discussion/${postId}`);
+      await axiosClient.delete(`/discussion/${deleteTarget._id}`);
+      setDeleteTarget(null);
       await fetchDiscussion();
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not delete that post.');
+      setDeleteError(err.response?.data?.error || 'Could not delete that post.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -307,12 +317,41 @@ const Discussion = ({ problemId }) => {
               post={post}
               currentUser={user}
               onLike={handleLike}
-              onDelete={handleDelete}
+              onDelete={setDeleteTarget}
               onReplySubmit={handleReplySubmit}
             />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setDeleteTarget(null);
+            setDeleteError('');
+          }
+        }}
+        tone="danger"
+        icon={Trash2}
+        title={deleteTarget?.parentId ? 'Delete this reply?' : 'Delete this post?'}
+        subject={deleteTarget && (
+          <span className="t-body-sm line-clamp-2 min-w-0 text-ink-2">
+            {deleteTarget.title || deleteTarget.content}
+          </span>
+        )}
+        consequences={
+          deleteTarget?.parentId
+            ? ['The reply disappears for everyone. This cannot be undone.']
+            : ['The post and every reply on it disappear for everyone.', 'This cannot be undone.']
+        }
+        error={deleteError}
+        loading={deleting}
+        confirmLabel="Delete"
+        confirmIcon={Trash2}
+        cancelLabel="Keep it"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

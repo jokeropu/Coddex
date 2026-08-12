@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import AdminProblemTable from './AdminProblemTable';
-import { Button, Note } from '../design/primitives';
-import { Dialog, DialogContent } from '../design/overlays';
+import { Button } from '../design/primitives';
+import { ConfirmDialog } from '../design/overlays';
 import { toast } from '../design/Toaster';
 import { problemNo } from '../design/cn';
 
@@ -53,32 +53,30 @@ const AdminDelete = () => {
         )}
       />
 
-      <Dialog open={!!target} onOpenChange={(o) => !o && setTarget(null)}>
-        {target && (
-          <DialogContent
-            title="Delete this problem?"
-            description={`${problemNo(target.problemNumber)} — ${target.title}`}
-            width="max-w-md"
-            footer={
-              <>
-                <Button size="sm" tone="quiet" disabled={deleting} onClick={() => setTarget(null)}>
-                  Keep it
-                </Button>
-                <Button size="sm" tone="redline" loading={deleting} onClick={confirmDelete}>
-                  Withdraw permanently
-                </Button>
-              </>
-            }
-          >
-            <div className="flex flex-col gap-3">
-              <p className="t-body text-ink-2">
-                This removes the problem from the set for everyone. It cannot be undone.
-              </p>
-              {error && <Note tone="redline">{error}</Note>}
-            </div>
-          </DialogContent>
+      <ConfirmDialog
+        open={!!target}
+        onOpenChange={(o) => !o && setTarget(null)}
+        tone="danger"
+        icon={Trash2}
+        title="Delete this problem?"
+        subject={target && (
+          <>
+            <span className="t-data shrink-0 text-ink-3">{problemNo(target.problemNumber)}</span>
+            <span className="t-body min-w-0 truncate font-semibold text-ink">{target.title}</span>
+          </>
         )}
-      </Dialog>
+        consequences={[
+          'Everyone loses access to the problem, its test cases and its editorial.',
+          'Submission history for it stops resolving to anything.',
+          'This cannot be undone.',
+        ]}
+        error={error}
+        loading={deleting}
+        confirmLabel="Delete permanently"
+        confirmIcon={Trash2}
+        cancelLabel="Keep it"
+        onConfirm={confirmDelete}
+      />
     </>
   );
 };

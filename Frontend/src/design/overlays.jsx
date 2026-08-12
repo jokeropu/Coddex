@@ -3,15 +3,16 @@ import * as Dlg from '@radix-ui/react-dialog';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Tip from '@radix-ui/react-tooltip';
 import * as TabsRoot from '@radix-ui/react-tabs';
-import { X } from 'lucide-react';
+import { X, TriangleAlert, Info } from 'lucide-react';
 import { cn } from './cn';
+import { Button, Note } from './primitives';
 
 export const Dialog = Dlg.Root;
 export const DialogTrigger = Dlg.Trigger;
 export const DialogClose = Dlg.Close;
 
 export const DialogContent = forwardRef(function DialogContent(
-  { className, title, description, children, footer, width = 'max-w-lg', ...props },
+  { className, title, description, icon: Icon, tone, children, footer, width = 'max-w-lg', ...props },
   ref
 ) {
   return (
@@ -32,12 +33,31 @@ export const DialogContent = forwardRef(function DialogContent(
         )}
         {...props}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-rule bg-sheet-sunk px-4 py-2.5">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Dlg.Title className="t-h3 text-ink">{title}</Dlg.Title>
-            {description && (
-              <Dlg.Description className="t-body-sm text-ink-3">{description}</Dlg.Description>
+        <div className="flex items-start justify-between gap-4 border-b border-rule bg-sheet-sunk px-4 py-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            {Icon && (
+              <span
+                className="mt-px flex h-7 w-7 shrink-0 items-center justify-center border"
+                style={{
+                  color: tone || 'var(--c-ink-2)',
+                  borderColor: tone
+                    ? `color-mix(in srgb, ${tone} 45%, transparent)`
+                    : 'var(--c-rule)',
+                  background: tone
+                    ? `color-mix(in srgb, ${tone} 12%, transparent)`
+                    : 'var(--c-sheet-raised)',
+                }}
+                aria-hidden
+              >
+                <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+              </span>
             )}
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <Dlg.Title className="t-h3 text-ink">{title}</Dlg.Title>
+              {description && (
+                <Dlg.Description className="t-body-sm text-ink-3">{description}</Dlg.Description>
+              )}
+            </div>
           </div>
           <Dlg.Close
             className="-mr-1 -mt-0.5 shrink-0 border border-transparent p-1 text-ink-3 transition-colors hover:border-rule hover:text-ink"
@@ -58,6 +78,84 @@ export const DialogContent = forwardRef(function DialogContent(
     </Dlg.Portal>
   );
 });
+
+const CONFIRM_TONE = {
+  danger:  { color: 'var(--c-redline)', button: 'redline', icon: TriangleAlert },
+  caution: { color: 'var(--c-caution)', button: 'caution', icon: TriangleAlert },
+  info:    { color: 'var(--c-line)',    button: 'line',    icon: Info },
+};
+
+export const ConfirmDialog = ({
+  open,
+  onOpenChange,
+  tone = 'danger',
+  icon,
+  title,
+  subject,
+  body,
+  consequences,
+  error,
+  loading,
+  confirmLabel = 'Confirm',
+  confirmIcon: ConfirmIcon,
+  cancelLabel = 'Cancel',
+  onConfirm,
+  width = 'max-w-md',
+}) => {
+  const meta = CONFIRM_TONE[tone] || CONFIRM_TONE.danger;
+  const close = () => onOpenChange(false);
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && !loading && onOpenChange(false)}>
+      {open && (
+        <DialogContent
+          title={title}
+          icon={icon || meta.icon}
+          tone={meta.color}
+          width={width}
+          footer={
+            <>
+              <Button size="sm" tone="quiet" disabled={loading} onClick={close}>
+                {cancelLabel}
+              </Button>
+              <Button size="sm" tone={meta.button} loading={loading} onClick={onConfirm}>
+                {ConfirmIcon && <ConfirmIcon className="h-3 w-3" strokeWidth={1.75} />}
+                {confirmLabel}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3.5">
+            {subject && (
+              <div className="flex items-center gap-2.5 border border-rule bg-sheet-sunk px-3 py-2.5">
+                {subject}
+              </div>
+            )}
+
+            {body && <p className="t-body text-ink-2">{body}</p>}
+
+            {consequences?.length > 0 && (
+              <ul className="flex flex-col gap-1.5">
+                {consequences.map((line) => (
+                  <li key={line} className="t-body-sm flex items-start gap-2 text-ink-2">
+                    <span
+                      className="mt-1.5 h-1 w-1 shrink-0 rounded-full"
+                      style={{ background: meta.color }}
+                      aria-hidden
+                    />
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {error && <Note tone="redline">{error}</Note>}
+          </div>
+        </DialogContent>
+      )}
+    </Dialog>
+  );
+};
 
 export const DropdownMenu = Menu.Root;
 export const DropdownTrigger = Menu.Trigger;

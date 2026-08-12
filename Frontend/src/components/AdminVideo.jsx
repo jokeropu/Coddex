@@ -4,7 +4,7 @@ import { Upload, Trash2, Video } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import AdminProblemTable from './AdminProblemTable';
 import { Button, Note, Chip } from '../design/primitives';
-import { Dialog, DialogContent } from '../design/overlays';
+import { ConfirmDialog } from '../design/overlays';
 import { toast } from '../design/Toaster';
 import { problemNo } from '../design/cn';
 
@@ -93,59 +93,51 @@ const AdminVideo = () => {
         }}
       />
 
-      <Dialog open={!!replaceTarget} onOpenChange={(o) => !o && setReplaceTarget(null)}>
-        {replaceTarget && (
-          <DialogContent
-            title="Replace the existing walkthrough?"
-            description={`${problemNo(replaceTarget.problemNumber)} — ${replaceTarget.title}`}
-            width="max-w-md"
-            footer={
-              <>
-                <Button size="sm" tone="quiet" onClick={() => setReplaceTarget(null)}>Cancel</Button>
-                <Button
-                  size="sm"
-                  tone="line"
-                  onClick={() => navigate(`/admin/upload/${replaceTarget._id}`)}
-                >
-                  <Video className="h-3 w-3" strokeWidth={1.75} />
-                  Upload replacement
-                </Button>
-              </>
-            }
-          >
-            <p className="t-body text-ink-2">
-              This problem already has a walkthrough. Uploading a new one overwrites it.
-            </p>
-          </DialogContent>
+      <ConfirmDialog
+        open={!!replaceTarget}
+        onOpenChange={(o) => !o && setReplaceTarget(null)}
+        tone="caution"
+        icon={Video}
+        title="Replace the existing walkthrough?"
+        subject={replaceTarget && (
+          <>
+            <span className="t-data shrink-0 text-ink-3">{problemNo(replaceTarget.problemNumber)}</span>
+            <span className="t-body min-w-0 truncate font-semibold text-ink">{replaceTarget.title}</span>
+          </>
         )}
-      </Dialog>
+        consequences={[
+          'The current walkthrough is deleted once the new one saves.',
+          'Nothing changes until you finish the upload on the next screen.',
+        ]}
+        confirmLabel="Choose a replacement"
+        confirmIcon={Video}
+        cancelLabel="Cancel"
+        onConfirm={() => navigate(`/admin/upload/${replaceTarget._id}`)}
+      />
 
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        {deleteTarget && (
-          <DialogContent
-            title="Remove this walkthrough?"
-            description={`${problemNo(deleteTarget.problemNumber)} — ${deleteTarget.title}`}
-            width="max-w-md"
-            footer={
-              <>
-                <Button size="sm" tone="quiet" disabled={deleting} onClick={() => setDeleteTarget(null)}>
-                  Keep it
-                </Button>
-                <Button size="sm" tone="redline" loading={deleting} onClick={confirmDelete}>
-                  Remove walkthrough
-                </Button>
-              </>
-            }
-          >
-            <div className="flex flex-col gap-3">
-              <p className="t-body text-ink-2">
-                The problem stays in the set; only its video solution is deleted.
-              </p>
-              {error && <Note tone="redline">{error}</Note>}
-            </div>
-          </DialogContent>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        tone="danger"
+        icon={Trash2}
+        title="Remove this walkthrough?"
+        subject={deleteTarget && (
+          <>
+            <span className="t-data shrink-0 text-ink-3">{problemNo(deleteTarget.problemNumber)}</span>
+            <span className="t-body min-w-0 truncate font-semibold text-ink">{deleteTarget.title}</span>
+          </>
         )}
-      </Dialog>
+        consequences={[
+          'The problem itself stays in the set — only its video is removed.',
+          'A Cloudinary upload is deleted for good; a YouTube link just unlinks.',
+        ]}
+        error={error}
+        loading={deleting}
+        confirmLabel="Remove walkthrough"
+        confirmIcon={Trash2}
+        cancelLabel="Keep it"
+        onConfirm={confirmDelete}
+      />
     </>
   );
 };
