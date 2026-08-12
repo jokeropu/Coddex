@@ -12,8 +12,8 @@ import { fetchDrafts, clearDraftRemote } from '../utils/codeDraftApi';
 import { updateUserProfile } from '../authSlice';
 import { getLocalDraft, setLocalDraft, clearLocalDraft } from '../utils/codeDraftLocal';
 import { cn, formatMemory, formatRuntime } from '../design/cn';
-import { NoCopy } from '../design/primitives';
-import { Check, X } from 'lucide-react';
+import { NoCopy, Chip, DifficultyMark } from '../design/primitives';
+import { Check, X, Copy, FlaskConical } from 'lucide-react';
 
 const errorMessage = (error, fallback) => {
   const data = error?.response?.data;
@@ -78,12 +78,6 @@ const LEFT_TABS = [
   },
 ];
 
-const DIFFICULTY_BADGE = {
-  easy: 'text-approved border-approved/45 bg-[color-mix(in_srgb,var(--c-approved)_13%,transparent)]',
-  medium: 'text-caution border-caution/45 bg-[color-mix(in_srgb,var(--c-caution)_13%,transparent)]',
-  hard: 'text-redline border-redline/45 bg-[color-mix(in_srgb,var(--c-redline)_13%,transparent)]',
-};
-
 const LANGUAGE_ACCENT = {
   javascript: 'text-yellow-400',
   java: 'text-orange-400',
@@ -144,6 +138,55 @@ const ReferenceSolutions = ({ solutions }) => {
         </div>
       ))}
     </NoCopy>
+  );
+};
+
+const ExampleCard = ({ index, example }) => {
+  const [copied, setCopied] = useState(false);
+
+  const copyInput = () => {
+    navigator.clipboard.writeText(example.input).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    });
+  };
+
+  return (
+    <figure className="sheet">
+      <figcaption className="flex items-center justify-between gap-2 border-b border-rule bg-sheet-sunk px-3.5 py-2">
+        <span className="t-label text-ink-2">Example {index + 1}</span>
+        <button
+          type="button"
+          onClick={copyInput}
+          aria-label={copied ? 'Input copied' : `Copy example ${index + 1} input`}
+          className="flex items-center gap-1 text-ink-3 transition-colors hover:text-ink"
+        >
+          {copied
+            ? <Check className="h-3 w-3 text-approved" strokeWidth={2} aria-hidden />
+            : <Copy className="h-3 w-3" strokeWidth={2} aria-hidden />}
+          <span className="t-micro">{copied ? 'Copied' : 'Copy input'}</span>
+        </button>
+      </figcaption>
+
+      <dl className="grid grid-cols-[62px_minmax(0,1fr)] items-baseline gap-x-3 gap-y-2 px-3.5 py-3">
+        <dt className="t-micro text-ink-3">Input</dt>
+        <dd className="t-data sheet-sunk min-w-0 whitespace-pre-wrap break-words px-2.5 py-1.5 text-ink">
+          {example.input}
+        </dd>
+
+        <dt className="t-micro text-ink-3">Output</dt>
+        <dd className="t-data sheet-sunk min-w-0 whitespace-pre-wrap break-words px-2.5 py-1.5 text-approved">
+          {example.output}
+        </dd>
+
+        {example.explanation && (
+          <>
+            <dt className="t-micro text-ink-3">Why</dt>
+            <dd className="t-body-sm min-w-0 text-ink-2">{example.explanation}</dd>
+          </>
+        )}
+      </dl>
+    </figure>
   );
 };
 
@@ -457,45 +500,37 @@ const ProblemPage = () => {
           {problem && (
             <>
               {activeLeftTab === 'description' && (
-                <div>
-                  <div className="flex flex-wrap items-center gap-3 mb-6">
-                    <h1 className="text-2xl font-bold">
-                      <span className="text-ink-3 mr-1">{problem.problemNumber}.</span>
+                <div className="flex flex-col gap-7">
+                  <div className="flex flex-col gap-3">
+                    <h1 className="t-h1 text-ink">
+                      <span className="t-sheet-no mr-2 text-ink-3">{problem.problemNumber}</span>
                       {problem.title}
                     </h1>
-                    <div className={`t-micro inline-flex items-center rounded-full border px-2.5 py-1 leading-none ${DIFFICULTY_BADGE[problem.difficulty?.toLowerCase()] || 'text-ink-2 border-rule'}`}>
-                      {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
-                    </div>
-                    <div className="t-micro inline-flex items-center rounded-full border border-rule px-2.5 py-1 leading-none text-ink-2">{problem.tags}</div>
-                  </div>
-
-                  <div className="prose max-w-none">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed text-ink">
-                      {problem.description}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DifficultyMark difficulty={problem.difficulty} />
+                      <span className="h-3 w-px bg-rule" aria-hidden />
+                      <Chip>{problem.tags}</Chip>
                     </div>
                   </div>
 
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <span className="flex items-center justify-center h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--c-line)_12%,transparent)] text-line text-xs">✓</span>
-                      Examples
-                    </h3>
-                    <div className="space-y-4">
+                  <div className="t-prose whitespace-pre-wrap text-ink-2 [&_*]:max-w-full">
+                    {problem.description}
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="t-h3 flex items-center gap-2 text-ink">
+                        <FlaskConical className="h-3.5 w-3.5 text-line" strokeWidth={1.75} aria-hidden />
+                        Examples
+                      </h3>
+                      <span className="t-micro text-ink-3">
+                        {problem.visibleTestCases.length} shown · more are hidden
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
                       {problem.visibleTestCases.map((example, index) => (
-                        <div key={index} className="bg-sheet-sunk border border-rule p-4 rounded-lg">
-                          <h4 className="font-semibold mb-2 text-sm">Example {index + 1}</h4>
-                          <div className="space-y-2 text-sm">
-                            <div>
-                              <span className="text-ink-3 font-mono">Input:</span>
-                              <pre className="whitespace-pre-wrap font-mono bg-sheet-sunk rounded p-2 mt-1">{example.input}</pre>
-                            </div>
-                            <div>
-                              <span className="text-ink-3 font-mono">Output:</span>
-                              <pre className="whitespace-pre-wrap font-mono bg-sheet-sunk rounded p-2 mt-1">{example.output}</pre>
-                            </div>
-                            <div className="font-sans text-ink-2"><span className="text-ink-3 font-mono">Explanation:</span> {example.explanation}</div>
-                          </div>
-                        </div>
+                        <ExampleCard key={index} index={index} example={example} />
                       ))}
                     </div>
                   </div>
