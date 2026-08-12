@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import ProblemForm from './ProblemForm';
 import AppShell from '../design/AppShell';
 import { toast } from '../design/Toaster';
 import { problemNo } from '../design/cn';
 import { PageBody, Plotter, EmptySheet, Button } from '../design/primitives';
+import { ConfirmDialog } from '../design/overlays';
 
 function AdminUpdateForm() {
   const { id } = useParams();
@@ -14,6 +15,10 @@ function AdminUpdateForm() {
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [pendingSave, setPendingSave] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     const fetchProblem = async () => {
@@ -31,18 +36,26 @@ function AdminUpdateForm() {
     fetchProblem();
   }, [id]);
 
-  const onSubmit = async (data) => {
+  const requestSave = (data) => {
+    setSaveError('');
+    setPendingSave(data);
+  };
+
+  const confirmSave = async () => {
+    setSaving(true);
+    setSaveError('');
     try {
-      await axiosClient.put(`/problem/update/${id}`, data);
-      toast.success('Problem updated', { description: data.title });
-      navigate('/admin/update');
+      await axiosClient.put(`/problem/update/${id}`, pendingSave);
+      toast.success('Problem updated', { description: pendingSave.title });
+      navigate(problem?.contestId ? `/admin/contest/edit/${problem.contestId}` : '/admin/update');
     } catch (error) {
-      toast.error('Could not save your changes', {
-        description:
-          error.response?.data?.error ||
-          error.response?.data?.message ||
-          error.message,
-      });
+      setSaveError(
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        'Could not save your changes.'
+      );
+      setSaving(false);
     }
   };
 
@@ -68,12 +81,19 @@ function AdminUpdateForm() {
     );
   }
 
+  const inContest = !!problem.contestId;
+
   return (
-    <ProblemForm
+    <>
+      <ProblemForm
       heading="Edit problem"
-      subheading={`${problemNo(problem.problemNumber)} — ${problem.title}. Changes go live for every solver immediately.`}
+      subheading={
+        inContest
+          ? `${problemNo(problem.problemNumber)} — ${problem.title}. Part of a contest, so changes stay hidden until it opens.`
+          : `${problemNo(problem.problemNumber)} — ${problem.title}. Changes go live for every solver immediately.`
+      }
       submitLabel="Save changes"
-      onSubmit={onSubmit}
+      onSubmit={requestSave}
       defaultValues={{
         title: problem.title,
         description: problem.description,
@@ -86,6 +106,40 @@ function AdminUpdateForm() {
         hints: problem.hints || [],
       }}
     />
+
+      <ConfirmDialog
+        open={!!pendingSave}
+        onOpenChange={(o) => !o && setPendingSave(null)}
+        tone="caution"
+        icon={Save}
+        title="Save these changes?"
+        subject={
+          <>
+            <span className="t-data shrink-0 text-ink-3">{problemNo(problem.problemNumber)}</span>
+            <span className="t-body min-w-0 truncate font-semibold text-ink">
+              {pendingSave?.title || problem.title}
+            </span>
+          </>
+        }
+        consequences={
+          inContest
+            ? [
+                'The statement, test cases and solutions are replaced for this contest problem.',
+                'Nobody sees it until the contest opens, and editing closes an hour beforehand.',
+              ]
+            : [
+                'The statement, test cases and solutions are replaced for every solver immediately.',
+                'Existing submissions are judged against the new hidden test cases from now on.',
+              ]
+        }
+        error={saveError}
+        loading={saving}
+        confirmLabel="Save changes"
+        confirmIcon={Save}
+        cancelLabel="Keep editing"
+        onConfirm={confirmSave}
+      />
+    </>
   );
 }
 
