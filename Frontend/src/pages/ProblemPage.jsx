@@ -12,6 +12,7 @@ import { fetchDrafts, clearDraftRemote } from '../utils/codeDraftApi';
 import { updateUserProfile } from '../authSlice';
 import { getLocalDraft, setLocalDraft, clearLocalDraft } from '../utils/codeDraftLocal';
 import { cn, formatMemory, formatRuntime } from '../design/cn';
+import { NoCopy } from '../design/primitives';
 import { Check, X } from 'lucide-react';
 
 const errorMessage = (error, fallback) => {
@@ -103,7 +104,7 @@ const HintsList = ({ hints }) => {
   };
 
   return (
-    <div className="space-y-2">
+    <NoCopy className="space-y-2">
       {hints.map((hint, index) => (
         <div key={index} className="border border-rule rounded-lg overflow-hidden">
           <button
@@ -119,7 +120,7 @@ const HintsList = ({ hints }) => {
           )}
         </div>
       ))}
-    </div>
+    </NoCopy>
   );
 };
 
@@ -129,7 +130,7 @@ const ReferenceSolutions = ({ solutions }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <NoCopy className="space-y-4">
       {solutions.map((solution, index) => (
         <div key={index} className="border border-rule rounded-lg overflow-hidden shadow-sm">
           <div className="bg-sheet-sunk px-4 py-2 border-b border-rule">
@@ -142,7 +143,7 @@ const ReferenceSolutions = ({ solutions }) => {
           </div>
         </div>
       ))}
-    </div>
+    </NoCopy>
   );
 };
 

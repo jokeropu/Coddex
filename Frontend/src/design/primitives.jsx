@@ -309,6 +309,18 @@ export const PageBody = ({ className, width = 'max-w-[1400px]', children }) => (
   </div>
 );
 
+export const NoCopy = ({ as: Comp = 'div', className, children, ...props }) => (
+  <Comp
+    className={cn('no-copy', className)}
+    {...props}
+    onCopy={(e) => e.preventDefault()}
+    onCut={(e) => e.preventDefault()}
+    onDragStart={(e) => e.preventDefault()}
+  >
+    {children}
+  </Comp>
+);
+
 export const Rule = ({ className, strong }) => (
   <div
     className={cn('h-px w-full shrink-0', strong ? 'bg-rule-strong' : 'bg-rule-faint', className)}

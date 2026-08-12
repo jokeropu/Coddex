@@ -4,7 +4,7 @@ import { ThumbsUp, Reply, Trash2, Plus, X } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { cn } from '../design/cn';
 import {
-  Button, Input, Textarea, Note, Plotter, EmptySheet, Chip,
+  Button, Input, Textarea, Note, Plotter, EmptySheet, Chip, NoCopy,
 } from '../design/primitives';
 
 const formatDate = (d) =>
@@ -54,10 +54,10 @@ const PostNote = ({ post, isReply, currentUser, onLike, onDelete, onReplySubmit 
         </div>
 
         {post.title && <h4 className="t-h3 mb-1 text-ink">{post.title}</h4>}
-        <p className="t-body whitespace-pre-wrap text-ink-2">{post.content}</p>
+        <NoCopy as="p" className="t-body whitespace-pre-wrap text-ink-2">{post.content}</NoCopy>
 
         {post.code && (
-          <div className="mt-2.5 border border-rule">
+          <NoCopy className="mt-2.5 border border-rule">
             {post.language && (
               <div className="border-b border-rule bg-sheet-sunk px-2 py-1">
                 <span className="t-micro text-line">{post.language}</span>
@@ -66,7 +66,7 @@ const PostNote = ({ post, isReply, currentUser, onLike, onDelete, onReplySubmit 
             <pre className="t-data overflow-x-auto bg-sheet-sunk p-2.5 text-ink">
               <code>{post.code}</code>
             </pre>
-          </div>
+          </NoCopy>
         )}
 
         <div className="mt-2.5 flex items-center gap-1.5">
