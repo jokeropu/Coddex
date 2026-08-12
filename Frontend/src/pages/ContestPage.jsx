@@ -219,6 +219,7 @@ function ContestPage() {
   }
 
   const alreadySolved = solvedIds.has(selectedProblemId) && !isVirtual;
+  const entryClosed = !isVirtual && !contest.isCreator && !contest.entryOpen && !contest.hasEntered;
 
   const titleFields = (
     <>
@@ -256,11 +257,16 @@ function ContestPage() {
   return (
     <AppShell fill titleFields={titleFields}>
       <div className="flex h-full flex-col">
-        {(contest.isCreator || isVirtual) && (
+        {(contest.isCreator || isVirtual || entryClosed) && (
           <div className="shrink-0 border-b border-rule px-3 py-1.5">
             {contest.isCreator ? (
               <p className="t-body-sm text-redline">
                 You created this contest, so you cannot submit to it.
+              </p>
+            ) : entryClosed ? (
+              <p className="t-body-sm text-redline">
+                Entry closed 30 minutes after this contest opened. You can read the problems, and
+                attempt them as a practice run once it ends.
               </p>
             ) : (
               <p className="t-body-sm text-caution">
@@ -538,7 +544,13 @@ function ContestPage() {
               <div className="flex shrink-0 items-center justify-between gap-2 border-t border-rule bg-sheet-sunk px-2 py-1.5">
                 <span className="t-micro hidden text-ink-3 sm:inline">Drafts save as you type</span>
                 <div className="ml-auto flex items-center gap-1.5">
-                  <Button size="sm" onClick={handleRun} loading={running} disabled={busy || contest.isCreator}>
+                  <Button
+                    size="sm"
+                    onClick={handleRun}
+                    loading={running}
+                    disabled={busy || contest.isCreator || entryClosed}
+                    title={entryClosed ? 'Entry to this contest has closed' : undefined}
+                  >
                     <Play className="h-3 w-3" strokeWidth={2} />
                     Run
                   </Button>
@@ -547,8 +559,14 @@ function ContestPage() {
                     tone="line"
                     onClick={handleSubmit}
                     loading={submitting}
-                    disabled={busy || contest.isCreator || alreadySolved}
-                    title={alreadySolved ? 'Already accepted in this contest' : undefined}
+                    disabled={busy || contest.isCreator || alreadySolved || entryClosed}
+                    title={
+                      entryClosed
+                        ? 'Entry to this contest has closed'
+                        : alreadySolved
+                          ? 'Already accepted in this contest'
+                          : undefined
+                    }
                   >
                     <Send className="h-3 w-3" strokeWidth={2} />
                     {alreadySolved ? 'Accepted' : 'Submit'}

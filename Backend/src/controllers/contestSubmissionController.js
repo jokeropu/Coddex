@@ -3,6 +3,12 @@ const Contest=require('../models/contest');
 const ContestSubmission=require('../models/contestSubmission');
 const ContestParticipation=require('../models/contestParticipation');
 const getContestStatus=require('../utils/contestStatus');
+const {isContestEntryOpen}=require('../utils/contestStatus');
+
+const ENTRY_CLOSED="Entry closed 30 minutes after this contest opened. You can attempt it as a practice run once it ends.";
+
+const hasEntered=async(contestId,userId)=>
+    !!(await ContestParticipation.findOne({contestId,userId}).select('_id'));
 const {computeProblemScore}=require('../utils/contestScoring');
 const {getLanguageById,submitBatch,submitToken}=require('../utils/problemUtility');
 
@@ -59,6 +65,10 @@ const submitContestSolution=async(req,res)=>{
         }
 
         const isVirtual=status==='ended';
+
+        if(!isVirtual && !isContestEntryOpen(contest) && !(await hasEntered(contestId,userId))){
+            return res.status(403).json({error:ENTRY_CLOSED});
+        }
 
         if(!isVirtual){
             const alreadyAccepted=await ContestSubmission.findOne({contestId,userId,problemId,isVirtual:false,status:'accepted'});
@@ -182,6 +192,10 @@ const runContestCode=async(req,res)=>{
         }
         if(contest.createdBy.toString()===userId.toString()){
             return res.status(403).json({error:"The contest creator cannot participate in their own contest"});
+        }
+
+        if(status==='live' && !isContestEntryOpen(contest) && !(await hasEntered(contestId,userId))){
+            return res.status(403).json({error:ENTRY_CLOSED});
         }
 
         const problem=await Problem.findById(problemId);

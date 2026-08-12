@@ -4,7 +4,8 @@ const Contest=require('../models/contest');
 const User=require('../models/user');
 const SolutionVideo=require('../models/solutionVideo');
 const getContestStatus=require('../utils/contestStatus');
-const {isContestEditable}=require('../utils/contestStatus');
+const {isContestEditable,isContestEntryOpen}=require('../utils/contestStatus');
+const ContestParticipation=require('../models/contestParticipation');
 const {extractYoutubeId,fetchYoutubeMeta}=require('../utils/youtube');
 const {discardWalkthrough,attachYoutubeWalkthrough}=require('../utils/walkthrough');
 const notify=require('../utils/notify');
@@ -197,7 +198,9 @@ const getContestById=async(req,res)=>{
             endTime:contest.endTime,
             status,
             isCreator:contest.createdBy.toString()===req.result._id.toString(),
-            editable:isContestEditable(contest)
+            editable:isContestEditable(contest),
+            entryOpen:isContestEntryOpen(contest),
+            hasEntered:!!(await ContestParticipation.findOne({contestId:contest._id,userId:req.result._id}).select('_id'))
         };
 
         const isCreator=contest.createdBy.toString()===req.result._id.toString();
