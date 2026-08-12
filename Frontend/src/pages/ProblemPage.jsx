@@ -152,8 +152,8 @@ const ExampleCard = ({ index, example }) => {
   };
 
   return (
-    <figure className="sheet">
-      <figcaption className="flex items-center justify-between gap-2 border-b border-rule bg-sheet-sunk px-3.5 py-2">
+    <figure className="sheet-sunk overflow-hidden">
+      <figcaption className="flex items-center justify-between gap-2 border-b border-rule-faint px-3.5 py-2">
         <span className="t-label text-ink-2">Example {index + 1}</span>
         <button
           type="button"
@@ -170,12 +170,12 @@ const ExampleCard = ({ index, example }) => {
 
       <dl className="grid grid-cols-[86px_minmax(0,1fr)] gap-x-3 gap-y-2.5 px-3.5 py-3">
         <dt className="t-body-sm pt-1.5 text-ink-3">Input</dt>
-        <dd className="t-data min-w-0 whitespace-pre-wrap break-words bg-sheet-sunk px-2.5 py-1.5 text-ink">
+        <dd className="t-data min-w-0 whitespace-pre-wrap break-words bg-sheet-raised px-2.5 py-1.5 text-ink">
           {example.input}
         </dd>
 
         <dt className="t-body-sm pt-1.5 text-ink-3">Output</dt>
-        <dd className="t-data min-w-0 whitespace-pre-wrap break-words bg-sheet-sunk px-2.5 py-1.5 text-ink">
+        <dd className="t-data min-w-0 whitespace-pre-wrap break-words bg-sheet-raised px-2.5 py-1.5 text-ink">
           {example.output}
         </dd>
 
@@ -517,12 +517,7 @@ const ProblemPage = () => {
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="t-h3 text-ink">Examples</h3>
-                      <span className="t-micro text-ink-3">
-                        {problem.visibleTestCases.length} shown · more are hidden
-                      </span>
-                    </div>
+                    <h3 className="t-h3 text-ink">Examples</h3>
 
                     <div className="flex flex-col gap-3">
                       {problem.visibleTestCases.map((example, index) => (
