@@ -335,11 +335,6 @@ const Discussion = ({ problemId }) => {
         tone="danger"
         icon={Trash2}
         title={deleteTarget?.parentId ? 'Delete this reply?' : 'Delete this post?'}
-        subject={deleteTarget && (
-          <span className="t-body-sm line-clamp-2 min-w-0 text-ink-2">
-            {deleteTarget.title || deleteTarget.content}
-          </span>
-        )}
         consequences={
           deleteTarget?.parentId
             ? ['The reply disappears for everyone. This cannot be undone.']

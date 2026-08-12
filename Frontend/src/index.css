@@ -421,8 +421,8 @@ body::after {
 @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
 
 @keyframes dialog-in {
-  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
-  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  from { opacity: 0; transform: scale(0.97) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes pop-in {
