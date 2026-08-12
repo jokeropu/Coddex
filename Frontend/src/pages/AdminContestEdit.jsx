@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams, Link } from 'react-router';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil, Save } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import AppShell from '../design/AppShell';
 import { toast } from '../design/Toaster';
@@ -10,6 +10,7 @@ import {
   Module, ModuleHead, PageHeader, PageBody, Button, Input, Textarea,
   FormRow, Note, Plotter, EmptySheet, DifficultyMark,
 } from '../design/primitives';
+import { ConfirmDialog } from '../design/overlays';
 
 const toDatetimeLocal = (isoString) => {
   const date = new Date(isoString);
@@ -24,6 +25,10 @@ function AdminContestEdit() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [pendingSave, setPendingSave] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
 
   useEffect(() => {
@@ -32,7 +37,7 @@ function AdminContestEdit() {
       try {
         const { data } = await axiosClient.get(`/contest/${contestId}`);
         setContest(data);
-        if (data.isCreator && data.status === 'upcoming') {
+        if (data.isCreator && data.editable) {
           reset({
             title: data.title,
             description: data.description,
@@ -53,14 +58,22 @@ function AdminContestEdit() {
     fetchContest();
   }, [contestId, reset]);
 
-  const onSubmit = async (formData) => {
+  const requestSave = (formData) => {
     setError(null);
+    setSaveError('');
+    setPendingSave(formData);
+  };
+
+  const confirmSave = async () => {
+    setSaving(true);
+    setSaveError('');
     try {
-      await axiosClient.put(`/contest/${contestId}`, formData);
+      await axiosClient.put(`/contest/${contestId}`, pendingSave);
       toast.success('Contest updated');
       navigate('/contests');
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not save those changes. Try again.');
+      setSaveError(err.response?.data?.error || 'Could not save those changes. Try again.');
+      setSaving(false);
     }
   };
 
@@ -84,13 +97,17 @@ function AdminContestEdit() {
     );
   }
 
-  if (!contest?.isCreator || contest.status !== 'upcoming') {
+  if (!contest?.isCreator || !contest.editable) {
     return (
       <AppShell>
         <PageBody width="max-w-2xl">
           <EmptySheet
             title="This contest is locked"
-            detail="A contest can only be edited by the admin who created it, and only before it opens."
+            detail={
+              contest?.isCreator
+                ? 'Editing closes an hour before a contest opens, so the paper cannot change under anyone already preparing.'
+                : 'A contest can only be edited by the admin who created it.'
+            }
             action={backAction}
           />
         </PageBody>
@@ -103,14 +120,14 @@ function AdminContestEdit() {
       <PageBody width="max-w-2xl">
         <PageHeader
           title="Edit contest"
-          detail="Title, description, timing and walkthroughs can change until the contest opens. The three problems themselves are fixed once created."
+          detail="Everything here stays editable until an hour before the contest opens. After that the paper is locked."
           actions={backAction}
         />
 
         <Module ticks>
           <ModuleHead label="Contest details" />
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3.5 p-4">
+          <form onSubmit={handleSubmit(requestSave)} className="flex flex-col gap-3.5 p-4">
             {error && <Note tone="redline">{error}</Note>}
 
             <FormRow label="Title" required error={errors.title?.message}>
@@ -145,21 +162,28 @@ function AdminContestEdit() {
             {contest.problems?.length > 0 && (
               <div className="flex flex-col gap-4 border-t border-rule-faint pt-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="t-label text-ink-2">Walkthroughs</span>
-                  <span className="t-micro text-ink-3">optional</span>
+                  <span className="t-label text-ink-2">Problems</span>
+                  <span className="t-micro text-ink-3">walkthrough optional</span>
                 </div>
 
                 <p className="t-body-sm -mt-2 text-ink-3">
-                  A walkthrough stays hidden until this contest closes, then publishes with its
-                  problem. Clear a field to remove one.
+                  Statements, test cases and solutions stay editable until an hour before the
+                  contest opens. A walkthrough stays hidden until it closes, then publishes with
+                  its problem — clear a field to remove one.
                 </p>
 
                 {contest.problems.map((problem, index) => (
-                  <div key={problem._id} className="flex flex-col gap-1.5">
+                  <div key={problem._id} className="flex flex-col gap-1.5 border border-rule bg-sheet-sunk p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="t-data text-ink-3">{problemNo(problem.problemNumber)}</span>
-                      <span className="t-body min-w-0 truncate font-semibold text-ink">{problem.title}</span>
+                      <span className="t-body min-w-0 flex-1 truncate font-semibold text-ink">{problem.title}</span>
                       <DifficultyMark difficulty={problem.difficulty} />
+                      <Button size="xs" tone="outline" asChild>
+                        <Link to={`/admin/update/${problem._id}`}>
+                          <Pencil className="h-3 w-3" strokeWidth={1.75} />
+                          Edit
+                        </Link>
+                      </Button>
                     </div>
 
                     <input type="hidden" {...register(`walkthroughs.${index}.problemId`)} />
@@ -184,6 +208,30 @@ function AdminContestEdit() {
             </Button>
           </form>
         </Module>
+
+        <ConfirmDialog
+          open={!!pendingSave}
+          onOpenChange={(o) => !o && setPendingSave(null)}
+          tone="caution"
+          icon={Save}
+          title="Save these changes?"
+          subject={
+            <span className="t-body min-w-0 truncate font-semibold text-ink">
+              {pendingSave?.title || contest.title}
+            </span>
+          }
+          consequences={[
+            'Entrants see the new title, description and timing straight away.',
+            'Walkthrough links are verified and attached, and cleared fields remove theirs.',
+            'Editing closes an hour before the contest opens.',
+          ]}
+          error={saveError}
+          loading={saving}
+          confirmLabel="Save changes"
+          confirmIcon={Save}
+          cancelLabel="Keep editing"
+          onConfirm={confirmSave}
+        />
       </PageBody>
     </AppShell>
   );

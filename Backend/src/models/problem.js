@@ -105,6 +105,10 @@ const problemSchema=new Schema({
     visibleInProblemList:{
         type:Boolean,
         default:true
+    },
+    removedByAdmin:{
+        type:Boolean,
+        default:false
     }
 })
 

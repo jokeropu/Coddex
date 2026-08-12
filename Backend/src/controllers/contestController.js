@@ -4,6 +4,7 @@ const Contest=require('../models/contest');
 const User=require('../models/user');
 const SolutionVideo=require('../models/solutionVideo');
 const getContestStatus=require('../utils/contestStatus');
+const {isContestEditable}=require('../utils/contestStatus');
 const {extractYoutubeId,fetchYoutubeMeta}=require('../utils/youtube');
 const {discardWalkthrough,attachYoutubeWalkthrough}=require('../utils/walkthrough');
 const notify=require('../utils/notify');
@@ -41,7 +42,10 @@ const publishContestProblemsIfEnded=async(contest)=>{
             {$set:{problemsPublished:true}}
         );
         if(claimed){
-            await Problem.updateMany({contestId:contest._id},{$set:{visibleInProblemList:true}});
+            await Problem.updateMany(
+                {contestId:contest._id,removedByAdmin:{$ne:true}},
+                {$set:{visibleInProblemList:true}}
+            );
         }
         contest.problemsPublished=true;
     }
@@ -192,7 +196,8 @@ const getContestById=async(req,res)=>{
             startTime:contest.startTime,
             endTime:contest.endTime,
             status,
-            isCreator:contest.createdBy.toString()===req.result._id.toString()
+            isCreator:contest.createdBy.toString()===req.result._id.toString(),
+            editable:isContestEditable(contest)
         };
 
         const isCreator=contest.createdBy.toString()===req.result._id.toString();
@@ -242,8 +247,8 @@ const updateContest=async(req,res)=>{
         if(contest.createdBy.toString()!==req.result._id.toString()){
             return res.status(403).json({error:"Only the contest creator can edit this contest"});
         }
-        if(getContestStatus(contest)!=='upcoming'){
-            return res.status(400).json({error:"Only contests that have not started yet can be edited"});
+        if(!isContestEditable(contest)){
+            return res.status(400).json({error:"A contest can no longer be edited within an hour of it opening"});
         }
 
         const newStartTime=startTime?new Date(startTime):contest.startTime;

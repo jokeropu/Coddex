@@ -7,6 +7,7 @@ const SolutionVideo=require('../models/solutionVideo');
 const Contest=require('../models/contest');
 const UnlockedContent=require('../models/unlockedContent');
 const getContestStatus=require('../utils/contestStatus');
+const {isContestEditable}=require('../utils/contestStatus');
 const {VIDEO_UNLOCK_COST,EDITORIAL_UNLOCK_COST}=require('../config/unlockConfig');
 
 const createProblem=async(req,res)=>{
@@ -66,6 +67,18 @@ const updateProblem=async(req,res)=>{
             return res.status(404).send("Problem ID is not present in DB");
         }
 
+        if(DsaProblem.contestId){
+            const contest=await Contest.findById(DsaProblem.contestId).select('startTime endTime createdBy');
+            if(contest){
+                if(contest.createdBy.toString()!==req.result._id.toString()){
+                    return res.status(403).send("Only the contest creator can edit this contest's problems");
+                }
+                if(!isContestEditable(contest)){
+                    return res.status(400).send("A contest problem can no longer be edited within an hour of the contest opening");
+                }
+            }
+        }
+
         for(const {language,completeCode} of referenceSolution){
             const languageId=getLanguageById(language);
 
@@ -105,10 +118,17 @@ const deleteProblem=async(req,res)=>{
         if(!id){
             return res.status(400).send("Missing Problem Id");
         }
-        const deletedProblem=await Problem.findByIdAndDelete(id);
-        if(!deletedProblem){
+        const problem=await Problem.findById(id).select('contestId');
+        if(!problem){
             return res.status(404).send("Problem ID is not present in DB");
         }
+
+        if(problem.contestId){
+            await Problem.updateOne({_id:id},{$set:{removedByAdmin:true,visibleInProblemList:false}});
+            return res.status(200).send("Problem removed from the problem list");
+        }
+
+        await Problem.deleteOne({_id:id});
         res.status(200).send("Problem Deleted Successfully");
     }
     catch(err){
